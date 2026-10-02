@@ -97,7 +97,7 @@ public class FeatureScorer
                     idf;
             }
 
-            if (sample.Negative.TryGetValue(
+            /*if (sample.Negative.TryGetValue(
                     gram,
                     out float n))
             {
@@ -105,7 +105,7 @@ public class FeatureScorer
                     tfValue *
                     n *
                     idf;
-            }
+            }*/
         }
 
         return Math.Max(
@@ -152,7 +152,7 @@ public class FeatureScorer
                     idf;
             }
 
-            if (sample.Negative.TryGetValue(
+            /*if (sample.Negative.TryGetValue(
                     word,
                     out float n))
             {
@@ -160,7 +160,7 @@ public class FeatureScorer
                     tfValue *
                     n *
                     idf;
-            }
+            }*/
         }
 
         return Math.Max(

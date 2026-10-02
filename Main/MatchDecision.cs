@@ -7,7 +7,7 @@ public class MatchDecision
     public float AmbiguousRelativeGap { get; set; } = 0.10f;
 
     public MatchState Classify(
-        List<MatchResult> results)
+        IReadOnlyList<MatchResult> results)
     {
         if (results == null ||
             results.Count == 0)

@@ -8,8 +8,7 @@ public class StatisticalMatcher
     // Components
     // =========================================================
 
-    private readonly List<ActionTrainingSample> samples =
-        new List<ActionTrainingSample>();
+    private readonly List<ActionTrainingSample> samples = new();
 
     private readonly FeatureScorer featureScorer =
         new FeatureScorer();
@@ -31,34 +30,30 @@ public class StatisticalMatcher
 
     public float WordWeight { get; set; } = 1.0f;
 
-    public float ContextWeight { get; set; } = 0.25f;
+    //public float ContextWeight { get; set; } = 0.25f;
 
-    public float PersonalWeight { get; set; } = 0.15f;
+    //public float PersonalWeight { get; set; } = 0.15f;
 
-    public float FocusWeight { get; set; } = 0.75f;
+    //public float FocusWeight { get; set; } = 0.75f;
 
     // =========================================================
     // Constructor
     // =========================================================
 
-    public StatisticalMatcher()
+    public StatisticalMatcher(ActionDatabase database)
     {
-        slotMatcher =
-            new SlotMatcher(
-                featureScorer);
+        slotMatcher = new (featureScorer);
+        slotMatcher.CharacterWeight = CharacterWeight;
+        slotMatcher.WordWeight = WordWeight;
 
-        slotMatcher.CharacterWeight =
-            CharacterWeight;
-
-        slotMatcher.WordWeight =
-            WordWeight;
+        Build(database);
     }
 
     // =========================================================
     // Calibration
     // =========================================================
 
-    public float SlotExplicitThreshold
+    /*public float SlotExplicitThreshold
     {
         get => slotMatcher.ExplicitThreshold;
         set => slotMatcher.ExplicitThreshold = value;
@@ -74,14 +69,13 @@ public class StatisticalMatcher
     {
         get => decision.AmbiguousRelativeGap;
         set => decision.AmbiguousRelativeGap = value;
-    }
+    }*/
 
     // =========================================================
     // Build
     // =========================================================
 
-    public void Build(
-        ActionDatabase database)
+    private void Build(ActionDatabase database)
     {
         samples.Clear();
 
@@ -89,11 +83,7 @@ public class StatisticalMatcher
             ActionDefinition definition
             in database.actions)
         {
-            ActionTrainingSample sample =
-                new ActionTrainingSample();
-
-            sample.ActionId =
-                definition.action_id;
+            ActionTrainingSample sample = new(definition.action_id);
 
             sample.Intend =
                 string.IsNullOrWhiteSpace(
@@ -120,7 +110,7 @@ public class StatisticalMatcher
                     1f);
             }
 
-            foreach (
+            /*foreach (
                 string text
                 in definition.negative)
             {
@@ -128,13 +118,12 @@ public class StatisticalMatcher
                     sample.Negative,
                     text.Normalize(),
                     1f);
-            }
+            }*/
 
             NormalizeDictionary(
                 sample.Positive);
 
-            NormalizeDictionary(
-                sample.Negative);
+            //NormalizeDictionary(sample.Negative);
 
             samples.Add(sample);
         }
@@ -147,20 +136,18 @@ public class StatisticalMatcher
     // Match
     // =========================================================
 
-    public List<MatchResult> Match(
+    public IReadOnlyList<MatchResult> Match(
         string currentInput,
-        string previousActionId = null,
-        string focusTarget = null,
+        //string previousActionId = null,
+        //string focusTarget = null,
         int topK = 5)
     {
-        if (string.IsNullOrWhiteSpace(
-                currentInput))
+        if (string.IsNullOrWhiteSpace(currentInput))
         {
-            return new List<MatchResult>();
+            return Array.Empty<MatchResult>();
         }
 
-        string current =
-            currentInput.Normalize();
+        string current = currentInput.Normalize();
 
         // -----------------------------------------
         // INTENT
@@ -184,12 +171,9 @@ public class StatisticalMatcher
         // Action candidates
         // -----------------------------------------
 
-        List<MatchResult> results =
-            new List<MatchResult>();
+        List<MatchResult> results = new();
 
-        foreach (
-            ActionTrainingSample sample
-            in samples)
+        foreach (ActionTrainingSample sample in samples)
         {
             float intendScore =
                 GetSlotScore(
@@ -241,22 +225,22 @@ public class StatisticalMatcher
             // Context
             // -----------------------------------------
 
-            float contextScore = 0f;
+            //float contextScore = 0f;
 
             // -----------------------------------------
             // Personal
             // -----------------------------------------
 
-            float personalScore =
-                ScorePersonal(
-                    sample.ActionId,
-                    current);
+            //float personalScore =
+            //    ScorePersonal(
+            //        sample.ActionId,
+            //        current);
 
             // -----------------------------------------
             // Focus
             // -----------------------------------------
 
-            float focusScore = 0f;
+            /*float focusScore = 0f;
 
             bool focusUsed = false;
 
@@ -270,45 +254,28 @@ public class StatisticalMatcher
             {
                 focusScore = 1f;
                 focusUsed = true;
-            }
+            }*/
 
             // -----------------------------------------
             // Final
             // -----------------------------------------
 
             float finalScore =
-                intendScore *
-                IntendWeight
+            intendScore * IntendWeight
 
-                +
+            + targetScore * TargetWeight
 
-                targetScore *
-                TargetWeight
+            + characterScore * CharacterWeight
 
-                +
+            + wordScore * WordWeight
 
-                characterScore *
-                CharacterWeight
+            //+ contextScore * ContextWeight
 
-                +
+            //+ personalScore * PersonalWeight
 
-                wordScore *
-                WordWeight
+            //+ focusScore * FocusWeight
 
-                +
-
-                contextScore *
-                ContextWeight
-
-                +
-
-                personalScore *
-                PersonalWeight
-
-                +
-
-                focusScore *
-                FocusWeight;
+            ;
 
             results.Add(
                 new MatchResult(
@@ -325,21 +292,22 @@ public class StatisticalMatcher
                     characterScore,
                     wordScore,
 
-                    contextScore,
-                    personalScore,
-                    focusScore,
+                    //contextScore,
+                    //personalScore,
+                    //focusScore,
 
                     finalScore,
 
                     intent.Explicit,
-                    target.Explicit,
+                    target.Explicit
 
-                    focusUsed));
+                    //focusUsed
+                    ));
         }
 
         return results
             .OrderByDescending(
-                x => x.FinalScore)
+             x => x.FinalScore)
             .Take(topK)
             .ToList();
     }
@@ -349,7 +317,7 @@ public class StatisticalMatcher
     // =========================================================
 
     public MatchState Classify(
-        List<MatchResult> results)
+        IReadOnlyList<MatchResult> results)
     {
         return decision.Classify(
             results);

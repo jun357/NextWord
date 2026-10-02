@@ -4,26 +4,27 @@ public class ActionTrainingSample
 {
     public const string NULL_LABEL = "NULL";
 
-    public string ActionId;
-
+    public EscapeAction ActionId;
     public string Intend;
     public string Target;
 
     public string DisplayText;
 
-    public Dictionary<string, float> Positive =
-        new Dictionary<string, float>();
+    public Dictionary<string, float> Positive = new();
 
-    public Dictionary<string, float> Negative =
-        new Dictionary<string, float>();
+    //public Dictionary<string, float> Negative =
+    //    new Dictionary<string, float>();
+
+    public ActionTrainingSample(EscapeAction action)
+    {
+        ActionId = action;
+    }
 
     public string NormalizedIntend
     {
         get
         {
-            return string.IsNullOrWhiteSpace(Intend)
-                ? NULL_LABEL
-                : Intend;
+            return string.IsNullOrWhiteSpace(Intend) ? NULL_LABEL : Intend;
         }
     }
 
@@ -31,9 +32,7 @@ public class ActionTrainingSample
     {
         get
         {
-            return string.IsNullOrWhiteSpace(Target)
-                ? NULL_LABEL
-                : Target;
+            return string.IsNullOrWhiteSpace(Target) ? NULL_LABEL : Target;
         }
     }
 }
