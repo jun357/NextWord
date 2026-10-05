@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using UnityEngine;
 
 namespace NaturalLanguageActionClassifier
 {
@@ -12,9 +14,9 @@ namespace NaturalLanguageActionClassifier
     public class TrainingSample
     {
         public string Text { get; }
-        public string Action { get; }
+        public EscapeAction Action { get; }
 
-        public TrainingSample(string text, string action)
+        public TrainingSample(string text, EscapeAction action)
         {
             Text = text;
             Action = action;
@@ -35,8 +37,7 @@ namespace NaturalLanguageActionClassifier
 
     public class TextVectorizer
     {
-        private readonly Dictionary<string, int> vocabulary
-            = new Dictionary<string, int>();
+        private readonly Dictionary<string, int> vocabulary = new();
 
         private double[] idf;
 
@@ -187,13 +188,19 @@ namespace NaturalLanguageActionClassifier
 
     public class Prediction
     {
-        public string Action { get; set; }
+        public EscapeAction Action { get; set; }
         public double Probability { get; set; }
 
-        public Prediction(string action, double probability)
+        public Prediction(EscapeAction action, double probability)
         {
             Action = action;
             Probability = probability;
+        }
+
+        public override string ToString()
+        {
+            return $"=> {Action} " +
+                $"({Probability:P1})";
         }
     }
 
@@ -213,17 +220,17 @@ namespace NaturalLanguageActionClassifier
         private double[,] weights;
         private double[] bias;
 
-        private List<string> labels;
+        private List<EscapeAction> labels;
 
         private int classCount;
         private int featureCount;
 
-        public IReadOnlyList<string> Labels => labels;
+        public IReadOnlyList<EscapeAction> Labels => labels;
 
         public void Fit(
             double[][] x,
             int[] y,
-            List<string> classLabels,
+            List<EscapeAction> classLabels,
             int epochs = 1000,
             double learningRate = 0.05)
         {
@@ -235,7 +242,7 @@ namespace NaturalLanguageActionClassifier
             weights = new double[classCount, featureCount];
             bias = new double[classCount];
 
-            var random = new Random(42);
+            var random = new System.Random(42);
 
             // 작은 랜덤값으로 초기화
             for (int c = 0; c < classCount; c++)
@@ -369,8 +376,7 @@ namespace NaturalLanguageActionClassifier
         private readonly SoftmaxClassifier classifier =
             new SoftmaxClassifier();
 
-        private readonly List<string> actions =
-            new List<string>();
+        private readonly List<EscapeAction> actions = new();
 
         public void Train(
             List<TrainingSample> samples,
@@ -440,7 +446,7 @@ namespace NaturalLanguageActionClassifier
             if (result.Probability < threshold)
             {
                 return new Prediction(
-                    "UNKNOWN",
+                    EscapeAction.NoAction,
                     result.Probability);
             }
 
@@ -452,250 +458,57 @@ namespace NaturalLanguageActionClassifier
     // 6. 실행
     // ============================================================
 
-    class Program
+    public class LBA : MonoBehaviour, ITrain
     {
-        static void Main()
+        //[Header("JSON")] public TextAsset actionJson;
+        //private ActionDatabase trainingSamples;
+        private readonly ActionClassifier model = new();
+        [SerializeField] private UsedModel usedModel;
+
+        private void Awake()
         {
-            var samples = new List<TrainingSample>
-            {
-                // -------------------------
-                // LIGHT_ON
-                // -------------------------
+            usedModel.Model = this;
+        }
 
-                new TrainingSample(
-                    "불 켜줘",
-                    "LIGHT_ON"),
-
-                new TrainingSample(
-                    "불 좀 켜",
-                    "LIGHT_ON"),
-
-                new TrainingSample(
-                    "전등 켜줘",
-                    "LIGHT_ON"),
-
-                new TrainingSample(
-                    "거실 불 켜",
-                    "LIGHT_ON"),
-
-                new TrainingSample(
-                    "방 불 켜줘",
-                    "LIGHT_ON"),
-
-                new TrainingSample(
-                    "불을 켜주세요",
-                    "LIGHT_ON"),
-
-                // -------------------------
-                // LIGHT_OFF
-                // -------------------------
-
-                new TrainingSample(
-                    "불 꺼줘",
-                    "LIGHT_OFF"),
-
-                new TrainingSample(
-                    "불 좀 꺼",
-                    "LIGHT_OFF"),
-
-                new TrainingSample(
-                    "전등 꺼줘",
-                    "LIGHT_OFF"),
-
-                new TrainingSample(
-                    "거실 불 꺼",
-                    "LIGHT_OFF"),
-
-                new TrainingSample(
-                    "방 불 꺼줘",
-                    "LIGHT_OFF"),
-
-                new TrainingSample(
-                    "불을 꺼주세요",
-                    "LIGHT_OFF"),
-
-                // -------------------------
-                // AC_SET_TEMP
-                // -------------------------
-
-                new TrainingSample(
-                    "에어컨 24도로 설정해",
-                    "AC_SET_TEMP"),
-
-                new TrainingSample(
-                    "에어컨 온도 24도",
-                    "AC_SET_TEMP"),
-
-                new TrainingSample(
-                    "온도를 24도로 해줘",
-                    "AC_SET_TEMP"),
-
-                new TrainingSample(
-                    "에어컨을 26도로 맞춰",
-                    "AC_SET_TEMP"),
-
-                new TrainingSample(
-                    "실내 온도 23도로 설정",
-                    "AC_SET_TEMP"),
-
-                // -------------------------
-                // WEATHER
-                // -------------------------
-
-                new TrainingSample(
-                    "오늘 날씨 알려줘",
-                    "WEATHER"),
-
-                new TrainingSample(
-                    "오늘 날씨 어때",
-                    "WEATHER"),
-
-                new TrainingSample(
-                    "날씨 알려줘",
-                    "WEATHER"),
-
-                new TrainingSample(
-                    "비 와?",
-                    "WEATHER"),
-
-                new TrainingSample(
-                    "오늘 비가 오나요",
-                    "WEATHER"),
-
-                // -------------------------
-                // MUSIC
-                // -------------------------
-
-                new TrainingSample(
-                    "음악 틀어줘",
-                    "PLAY_MUSIC"),
-
-                new TrainingSample(
-                    "노래 틀어줘",
-                    "PLAY_MUSIC"),
-
-                new TrainingSample(
-                    "음악 재생해",
-                    "PLAY_MUSIC"),
-
-                new TrainingSample(
-                    "노래 재생",
-                    "PLAY_MUSIC"),
-
-                new TrainingSample(
-                    "음악 좀 틀어",
-                    "PLAY_MUSIC")
-            };
-
+        public void Train(ActionDatabase database)
+        {
             // ------------------------------------------------
             // 분류기 생성 및 학습
             // ------------------------------------------------
 
-            var model =
-                new ActionClassifier();
-
-            model.Train(
-                samples,
-                epochs: 1500,
-                learningRate: 0.1
-            );
-
-            Console.WriteLine(
+            UnityEngine.Debug.Log(
                 "Natural Language -> Action Classifier"
             );
 
-            Console.WriteLine(
-                "학습 완료\n"
+            List<TrainingSample> samples = new();
+            foreach (var sample in database.actions)
+            {
+                if (sample.action_id != EscapeAction.NoAction)
+                {
+                    foreach (string text in sample.positive)
+                    {
+                        samples.Add(new TrainingSample(text, sample.action_id));
+                    }
+                }
+            }
+
+            model.Train(
+                samples,
+                epochs: 750,
+                learningRate: 0.2
             );
 
-            // ------------------------------------------------
-            // 테스트
-            // ------------------------------------------------
+            UnityEngine.Debug.Log(
+                "학습 완료\n"
+            );
+        }
 
-            string[] testInputs =
-            {
-                "거실 전등 좀 켜줄래?",
-                "방 불 꺼줘",
-                "에어컨 온도 25도로 맞춰줘",
-                "오늘 비가 오나요?",
-                "노래 하나 틀어줘",
-                "안녕하세요"
-            };
-
-            foreach (string input in testInputs)
-            {
-                var result =
-                    model.PredictAction(
-                        input,
-                        threshold: 0.50
-                    );
-
-                Console.WriteLine(
-                    $"입력 : {input}"
-                );
-
-                Console.WriteLine(
-                    $"Action : {result.Action}"
-                );
-
-                Console.WriteLine(
-                    $"Confidence : {result.Probability:P2}"
-                );
-
-                Console.WriteLine();
-
-                // Top 3 출력
-                Console.WriteLine("Top 3:");
-
-                foreach (var p in
-                    model.Predict(input, 3))
-                {
-                    Console.WriteLine(
-                        $"  {p.Action,-15} " +
-                        $"{p.Probability:P2}"
-                    );
-                }
-
-                Console.WriteLine(
-                    "----------------------------"
-                );
-            }
-
-            // ------------------------------------------------
-            // 대화형 테스트
-            // ------------------------------------------------
-
-            while (true)
-            {
-                Console.Write(
-                    "\n명령 입력 (exit 종료): "
-                );
-
-                string input =
-                    Console.ReadLine();
-
-                if (string.Equals(
-                    input,
-                    "exit",
-                    StringComparison.OrdinalIgnoreCase))
-                {
-                    break;
-                }
-
-                if (string.IsNullOrWhiteSpace(input))
-                    continue;
-
-                var result =
-                    model.PredictAction(
-                        input,
-                        threshold: 0.50
-                    );
-
-                Console.WriteLine(
-                    $"=> {result.Action} " +
-                    $"({result.Probability:P1})"
-                );
-            }
+        public (EscapeAction, string[], double) Predict(string input, int top = 5)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            var result = model.Predict(input, top);
+            stopwatch.Stop();
+            return (result[0].Action, result.Select(x => x.ToString()).ToArray(), stopwatch.Elapsed.TotalMilliseconds);
         }
     }
 }

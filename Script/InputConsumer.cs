@@ -1,33 +1,36 @@
 using Newtonsoft.Json;
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+
+public interface ITrain
+{
+    public void Train(ActionDatabase database);
+    public (EscapeAction, string[], double) Predict(string input, int top = 5);
+}
 
 public class InputConsumer : MonoBehaviour
 {
     [SerializeField] private TMP_InputField input;
     [Header("JSON")] public TextAsset actionJson;
-    private StatisticalMatcher matcher;
+    [SerializeField] private UsedModel usedModel;
+    //private StatisticalMatcher matcher;
     //[SerializeField] private ActionMatcherTester tester;
 
-    private void Awake()
+    private void Start()
     {
-        matcher = new StatisticalMatcher(
-            JsonConvert.DeserializeObject<ActionDatabase>(
+        usedModel.Model.Train(JsonConvert.DeserializeObject<ActionDatabase>(
                 actionJson.text
-            )
-        );
+            ));
     }
 
     public void OnEndEdit()
     {
-        //tester.
-            Test(input.text, matcher);
+        Test(input.text);
     }
 
-    public void Test(string input, StatisticalMatcher matcher, int topK = 5)
+    public void Test(string input, int topK = 5)
     {
-        if (matcher == null)
+        if (usedModel == null || usedModel.Model == null)
         {
             Debug.LogWarning(
                 "Matcher가 아직 초기화되지 않았습니다."
@@ -36,32 +39,19 @@ public class InputConsumer : MonoBehaviour
             return;
         }
 
-        IReadOnlyList<MatchResult> results =
-            matcher.Match(
-                input,
-                //prevAction,
-                topK: topK
-            );
+        (EscapeAction action, string[] logs, double time) = usedModel.Model.Predict(input, topK);
 
-        MatchState state = matcher.Classify(results);
+        //MatchState state = matcher.Classify(results);
 
-        Debug.Log(
+        Debug.Log($"INPUT: {input} TIME: {time}");
+        /*Debug.Log(
             $"INPUT: {input}\n" +
             $"STATE: {state}"
-        );
+        );*/
 
-        for (int i = 0;
-             i < results.Count;
-             i++)
+        foreach (string log in logs)
         {
-            MatchResult r = results[i];
-
-            Debug.Log(r);
+            Debug.Log(log);
         }
-
-        /*if (results.Count > 0)
-        {
-            prevAction = results[0].ActionId;
-        }*/
     }
 }

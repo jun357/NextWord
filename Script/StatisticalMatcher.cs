@@ -1,22 +1,24 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using UnityEngine;
 
-public class StatisticalMatcher
+public class StatisticalMatcher : MonoBehaviour, ITrain
 {
+    [SerializeField] private UsedModel usedModel;
+
     // =========================================================
     // Components
     // =========================================================
 
     private readonly List<ActionTrainingSample> samples = new();
 
-    private readonly FeatureScorer featureScorer =
-        new FeatureScorer();
+    private readonly FeatureScorer featureScorer = new FeatureScorer();
 
-    private readonly SlotMatcher slotMatcher;
+    private SlotMatcher slotMatcher;
 
-    private readonly MatchDecision decision =
-        new MatchDecision();
+    private readonly MatchDecision decision = new MatchDecision();
 
     // =========================================================
     // Weights
@@ -40,13 +42,25 @@ public class StatisticalMatcher
     // Constructor
     // =========================================================
 
-    public StatisticalMatcher(ActionDatabase database)
+    /*public StatisticalMatcher(ActionDatabase database)
     {
         slotMatcher = new (featureScorer);
         slotMatcher.CharacterWeight = CharacterWeight;
         slotMatcher.WordWeight = WordWeight;
 
         Build(database);
+    }*/
+
+    private void MakeSlotMatcher()
+    {
+        slotMatcher = new(featureScorer);
+        slotMatcher.CharacterWeight = CharacterWeight;
+        slotMatcher.WordWeight = WordWeight;
+    }
+
+    private void Awake()
+    {
+        usedModel.Model = this;
     }
 
     // =========================================================
@@ -75,8 +89,12 @@ public class StatisticalMatcher
     // Build
     // =========================================================
 
+    void ITrain.Train(ActionDatabase database) => Build(database);
+
     private void Build(ActionDatabase database)
     {
+        MakeSlotMatcher();
+
         samples.Clear();
 
         foreach (
@@ -130,6 +148,14 @@ public class StatisticalMatcher
 
         featureScorer.Build(
             samples);
+    }
+
+    public (EscapeAction, string[], double) Predict(string input, int top = 5)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var result = Match(input, top);
+        stopwatch.Stop();
+        return (result[0].ActionId, result.Select(x => x.ToString()).ToArray(), stopwatch.Elapsed.TotalMilliseconds);
     }
 
     // =========================================================
