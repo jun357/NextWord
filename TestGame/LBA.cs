@@ -1,3 +1,4 @@
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -35,11 +36,11 @@ namespace NaturalLanguageActionClassifier
     // -> ...
     // ============================================================
 
+    [Serializable]
     public class TextVectorizer
     {
-        private readonly Dictionary<string, int> vocabulary = new();
-
-        private double[] idf;
+        [SerializeField] private Dictionary<string, int> vocabulary = new();
+        [SerializeField] private double[] idf;
 
         private int minNGram = 2;
         private int maxNGram = 4;
@@ -215,15 +216,16 @@ namespace NaturalLanguageActionClassifier
     // Gradient Descent로 학습
     // ============================================================
 
+    [Serializable]
     public class SoftmaxClassifier
     {
-        private double[,] weights;
-        private double[] bias;
+        [SerializeField] private double[,] weights;
+        [SerializeField] private double[] bias;
 
-        private List<EscapeAction> labels;
+        [SerializeField] private List<EscapeAction> labels;
 
-        private int classCount;
-        private int featureCount;
+        [SerializeField] private int classCount;
+        [SerializeField] private int featureCount;
 
         public IReadOnlyList<EscapeAction> Labels => labels;
 
@@ -368,15 +370,20 @@ namespace NaturalLanguageActionClassifier
     // 5. Natural Language -> Action
     // ============================================================
 
+    [Serializable]
     public class ActionClassifier
     {
-        private readonly TextVectorizer vectorizer =
-            new TextVectorizer();
+        private readonly TextVectorizer vectorizer;
 
-        private readonly SoftmaxClassifier classifier =
-            new SoftmaxClassifier();
+        private readonly SoftmaxClassifier classifier;
 
         private readonly List<EscapeAction> actions = new();
+
+        public ActionClassifier(TextVectorizer vectorizer, SoftmaxClassifier classifier)
+        {
+            this.vectorizer = vectorizer;
+            this.classifier = classifier;
+        }
 
         public void Train(
             List<TrainingSample> samples,
@@ -412,8 +419,7 @@ namespace NaturalLanguageActionClassifier
             // Action -> 숫자
             int[] y =
                 samples
-                    .Select(s =>
-                        actions.IndexOf(s.Action))
+                    .Select(s => actions.IndexOf(s.Action))
                     .ToArray();
 
             classifier.Fit(
@@ -429,11 +435,9 @@ namespace NaturalLanguageActionClassifier
             string text,
             int topN = 3)
         {
-            double[] vector =
-                vectorizer.Transform(text);
+            double[] vector = vectorizer.Transform(text);
 
-            return classifier
-                .Predict(vector, topN);
+            return classifier .Predict(vector, topN);
         }
 
         public Prediction PredictAction(
@@ -460,18 +464,23 @@ namespace NaturalLanguageActionClassifier
 
     public class LBA : MonoBehaviour, ITrain
     {
-        //[Header("JSON")] public TextAsset actionJson;
-        //private ActionDatabase trainingSamples;
-        private readonly ActionClassifier model = new();
+        [Header("JSON")] public TextAsset pre_trained;
+        private ActionClassifier model = new(new(), new());
         [SerializeField] private UsedModel usedModel;
 
-        private void Awake()
+        private void Start()
         {
-            usedModel.Model = this;
+            if (usedModel != null)
+                usedModel.Model = this;
         }
 
         public void Train(ActionDatabase database)
         {
+            if (pre_trained != null)
+            {
+                model = JsonConvert.DeserializeObject<ActionClassifier>(pre_trained.text);
+            }
+
             // ------------------------------------------------
             // 분류기 생성 및 학습
             // ------------------------------------------------
@@ -494,8 +503,8 @@ namespace NaturalLanguageActionClassifier
 
             model.Train(
                 samples,
-                epochs: 750,
-                learningRate: 0.2
+                epochs: 400,
+                learningRate: 0.4
             );
 
             UnityEngine.Debug.Log(
