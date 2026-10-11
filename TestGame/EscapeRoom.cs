@@ -2,6 +2,11 @@ public sealed class EscapeRoom
 {
     public GameState State { get; } = new();
 
+    public string OnGameStart =
+    "낯선 방 안에 갇혀 있다.\n" +
+    "벽시계, 책장, 금고, 출입문이 눈에 들어온다.\n" +
+    "무언가 단서가 있을지도 모른다. 무엇을 살펴볼까?";
+
     public string Execute(EscapeAction action)
     {
         if (State.Escaped)
@@ -68,7 +73,7 @@ public sealed class EscapeRoom
     {
         return
             "작은 방이다. " +
-            "책장, 책상, 벽시계, 금고, 라디오와 출입문이 보인다.";
+            "책장, 벽시계, 금고, 라디오와 출입문이 보인다.";
     }
 
     private string InspectClock()

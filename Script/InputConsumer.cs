@@ -1,10 +1,25 @@
 using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+
+[Serializable]
+public struct EvalSample
+{
+    public string input;
+    public EscapeAction expectedActionId;
+}
 
 public interface ITrain
 {
     public void Train(ActionDatabase database);
+    public (EscapeAction, string[], double) Predict(string input, int top = 5);
+}
+
+public interface IEval
+{
+    public void Eval(List<EvalSample> samples);
     public (EscapeAction, string[], double) Predict(string input, int top = 5);
 }
 
@@ -13,14 +28,18 @@ public class InputConsumer : MonoBehaviour
     [SerializeField] private TMP_InputField input;
     [Header("JSON")] public TextAsset actionJson;
     [SerializeField] private UsedModel usedModel;
+    public event Action<EscapeAction> OnPredict;
     //private StatisticalMatcher matcher;
     //[SerializeField] private ActionMatcherTester tester;
 
-    private void Start()
+    private void Awake()
     {
-        usedModel.Model.Train(JsonConvert.DeserializeObject<ActionDatabase>(
-                actionJson.text
-            ));
+        usedModel.OnModelLoad += InputData;
+    }
+
+    private void InputData()
+    {
+        usedModel.Model.Train(JsonConvert.DeserializeObject<ActionDatabase>(actionJson.text));
     }
 
     public void OnEndEdit()
@@ -53,5 +72,7 @@ public class InputConsumer : MonoBehaviour
         {
             Debug.Log(log);
         }
+
+        OnPredict?.Invoke(action);
     }
 }

@@ -1,0 +1,466 @@
+{
+    "actions": [
+        {
+            "actionid": "activatemycard",
+            "intend": "Activate",
+            "target": "Card",
+            "context": null
+        },
+        {
+            "actionid": "agelimit",
+            "intend": "Check",
+            "target": "Eligibility",
+            "context": "AgeRestriction"
+        },
+        {
+            "actionid": "applepayorgooglepay",
+            "intend": "SetUp",
+            "target": "MobilePayment",
+            "context": null
+        },
+        {
+            "actionid": "atmsupport",
+            "intend": "Check",
+            "target": "ATM",
+            "context": "Availability"
+        },
+        {
+            "actionid": "automatictopup",
+            "intend": "SetUp",
+            "target": "TopUp",
+            "context": "Automatic"
+        },
+        {
+            "actionid": "balancenotupdatedafterbanktransfer",
+            "intend": "Resolve",
+            "target": "Balance",
+            "context": "NotUpdated"
+        },
+        {
+            "actionid": "balancenotupdatedafterchequeorcashdeposit",
+            "intend": "Resolve",
+            "target": "Balance",
+            "context": "NotUpdated"
+        },
+        {
+            "actionid": "beneficiarynotallowed",
+            "intend": "Resolve",
+            "target": "Beneficiary",
+            "context": "NotAllowed"
+        },
+        {
+            "actionid": "canceltransfer",
+            "intend": "Cancel",
+            "target": "Transfer",
+            "context": null
+        },
+        {
+            "actionid": "cardabouttoexpire",
+            "intend": "Check",
+            "target": "Card",
+            "context": "Expiring"
+        },
+        {
+            "actionid": "cardacceptance",
+            "intend": "Check",
+            "target": "Card",
+            "context": "Acceptance"
+        },
+        {
+            "actionid": "cardarrival",
+            "intend": "Check",
+            "target": "Card",
+            "context": "Arrival"
+        },
+        {
+            "actionid": "carddeliveryestimate",
+            "intend": "Estimate",
+            "target": "Card",
+            "context": "Delivery"
+        },
+        {
+            "actionid": "cardlinking",
+            "intend": "Link",
+            "target": "Card",
+            "context": null
+        },
+        {
+            "actionid": "cardnotworking",
+            "intend": "Resolve",
+            "target": "Card",
+            "context": "Malfunction"
+        },
+        {
+            "actionid": "cardpaymentfeecharged",
+            "intend": "Understand",
+            "target": "CardPayment",
+            "context": "Fee"
+        },
+        {
+            "actionid": "cardpaymentnotrecognised",
+            "intend": "Report",
+            "target": "CardPayment",
+            "context": "Unrecognised"
+        },
+        {
+            "actionid": "cardpaymentwrongexchangerate",
+            "intend": "Resolve",
+            "target": "CardPayment",
+            "context": "IncorrectExchangeRate"
+        },
+        {
+            "actionid": "cardswallowed",
+            "intend": "Resolve",
+            "target": "Card",
+            "context": "RetainedByATM"
+        },
+        {
+            "actionid": "cashwithdrawalcharge",
+            "intend": "Understand",
+            "target": "CashWithdrawal",
+            "context": "Fee"
+        },
+        {
+            "actionid": "cashwithdrawalnotrecognised",
+            "intend": "Report",
+            "target": "CashWithdrawal",
+            "context": "Unrecognised"
+        },
+        {
+            "actionid": "changepin",
+            "intend": "Change",
+            "target": "PIN",
+            "context": null
+        },
+        {
+            "actionid": "compromisedcard",
+            "intend": "Secure",
+            "target": "Card",
+            "context": "Compromised"
+        },
+        {
+            "actionid": "contactlessnotworking",
+            "intend": "Resolve",
+            "target": "ContactlessPayment",
+            "context": "Malfunction"
+        },
+        {
+            "actionid": "countrysupport",
+            "intend": "Check",
+            "target": "Country",
+            "context": "Availability"
+        },
+        {
+            "actionid": "declinedcardpayment",
+            "intend": "Resolve",
+            "target": "CardPayment",
+            "context": "Declined"
+        },
+        {
+            "actionid": "declinedcashwithdrawal",
+            "intend": "Resolve",
+            "target": "CashWithdrawal",
+            "context": "Declined"
+        },
+        {
+            "actionid": "declinedtransfer",
+            "intend": "Resolve",
+            "target": "Transfer",
+            "context": "Declined"
+        },
+        {
+            "actionid": "directdebitpaymentnotrecognised",
+            "intend": "Report",
+            "target": "DirectDebit",
+            "context": "Unrecognised"
+        },
+        {
+            "actionid": "disposablecardlimits",
+            "intend": "Check",
+            "target": "DisposableCard",
+            "context": "Limits"
+        },
+        {
+            "actionid": "editpersonaldetails",
+            "intend": "Edit",
+            "target": "PersonalDetails",
+            "context": null
+        },
+        {
+            "actionid": "exchangecharge",
+            "intend": "Understand",
+            "target": "CurrencyExchange",
+            "context": "Fee"
+        },
+        {
+            "actionid": "exchangerate",
+            "intend": "Check",
+            "target": "CurrencyExchange",
+            "context": "ExchangeRate"
+        },
+        {
+            "actionid": "exchangeviaapp",
+            "intend": "Exchange",
+            "target": "Currency",
+            "context": "InApp"
+        },
+        {
+            "actionid": "extrachargeonstatement",
+            "intend": "Investigate",
+            "target": "StatementCharge",
+            "context": "Unexpected"
+        },
+        {
+            "actionid": "failedtransfer",
+            "intend": "Resolve",
+            "target": "Transfer",
+            "context": "Failed"
+        },
+        {
+            "actionid": "fiatcurrencysupport",
+            "intend": "Check",
+            "target": "FiatCurrency",
+            "context": "Availability"
+        },
+        {
+            "actionid": "getdisposablevirtualcard",
+            "intend": "Get",
+            "target": "VirtualCard",
+            "context": "Disposable"
+        },
+        {
+            "actionid": "getphysicalcard",
+            "intend": "Get",
+            "target": "PhysicalCard",
+            "context": null
+        },
+        {
+            "actionid": "gettingsparecard",
+            "intend": "Get",
+            "target": "Card",
+            "context": "Spare"
+        },
+        {
+            "actionid": "gettingvirtualcard",
+            "intend": "Get",
+            "target": "VirtualCard",
+            "context": null
+        },
+        {
+            "actionid": "lostorstolencard",
+            "intend": "Report",
+            "target": "Card",
+            "context": "LostOrStolen"
+        },
+        {
+            "actionid": "lostorstolenphone",
+            "intend": "Report",
+            "target": "Phone",
+            "context": "LostOrStolen"
+        },
+        {
+            "actionid": "orderphysicalcard",
+            "intend": "Order",
+            "target": "PhysicalCard",
+            "context": null
+        },
+        {
+            "actionid": "passcodeforgotten",
+            "intend": "Recover",
+            "target": "Passcode",
+            "context": "Forgotten"
+        },
+        {
+            "actionid": "pendingcardpayment",
+            "intend": "Check",
+            "target": "CardPayment",
+            "context": "Pending"
+        },
+        {
+            "actionid": "pendingcashwithdrawal",
+            "intend": "Check",
+            "target": "CashWithdrawal",
+            "context": "Pending"
+        },
+        {
+            "actionid": "pendingtopup",
+            "intend": "Check",
+            "target": "TopUp",
+            "context": "Pending"
+        },
+        {
+            "actionid": "pendingtransfer",
+            "intend": "Check",
+            "target": "Transfer",
+            "context": "Pending"
+        },
+        {
+            "actionid": "pinblocked",
+            "intend": "Unblock",
+            "target": "PIN",
+            "context": "Blocked"
+        },
+        {
+            "actionid": "receivingmoney",
+            "intend": "Receive",
+            "target": "Money",
+            "context": null
+        },
+        {
+            "actionid": "Refundnotshowingup",
+            "intend": "Resolve",
+            "target": "Refund",
+            "context": "Missing"
+        },
+        {
+            "actionid": "requestrefund",
+            "intend": "Request",
+            "target": "Refund",
+            "context": null
+        },
+        {
+            "actionid": "revertedcardpayment",
+            "intend": "Understand",
+            "target": "CardPayment",
+            "context": "Reverted"
+        },
+        {
+            "actionid": "supportedcardsandcurrencies",
+            "intend": "Check",
+            "target": "PaymentMethods",
+            "context": "Compatibility"
+        },
+        {
+            "actionid": "terminateaccount",
+            "intend": "Terminate",
+            "target": "Account",
+            "context": null
+        },
+        {
+            "actionid": "topupbybanktransfercharge",
+            "intend": "Understand",
+            "target": "TopUp",
+            "context": "BankTransferFee"
+        },
+        {
+            "actionid": "topupbycardcharge",
+            "intend": "Understand",
+            "target": "TopUp",
+            "context": "CardFee"
+        },
+        {
+            "actionid": "topupbycashorcheque",
+            "intend": "TopUp",
+            "target": "Account",
+            "context": "CashOrCheque"
+        },
+        {
+            "actionid": "topupfailed",
+            "intend": "Resolve",
+            "target": "TopUp",
+            "context": "Failed"
+        },
+        {
+            "actionid": "topuplimits",
+            "intend": "Check",
+            "target": "TopUp",
+            "context": "Limits"
+        },
+        {
+            "actionid": "topupreverted",
+            "intend": "Resolve",
+            "target": "TopUp",
+            "context": "Reverted"
+        },
+        {
+            "actionid": "toppingupbycard",
+            "intend": "TopUp",
+            "target": "Account",
+            "context": "ByCard"
+        },
+        {
+            "actionid": "transactionchargedtwice",
+            "intend": "Resolve",
+            "target": "Transaction",
+            "context": "DuplicateCharge"
+        },
+        {
+            "actionid": "transferfeecharged",
+            "intend": "Understand",
+            "target": "Transfer",
+            "context": "Fee"
+        },
+        {
+            "actionid": "transferintoaccount",
+            "intend": "Transfer",
+            "target": "Account",
+            "context": "Incoming"
+        },
+        {
+            "actionid": "transfernotreceivedbyrecipient",
+            "intend": "Resolve",
+            "target": "Transfer",
+            "context": "NotReceived"
+        },
+        {
+            "actionid": "transfertiming",
+            "intend": "Check",
+            "target": "Transfer",
+            "context": "Timing"
+        },
+        {
+            "actionid": "unabletoverifyidentity",
+            "intend": "Resolve",
+            "target": "IdentityVerification",
+            "context": "Failed"
+        },
+        {
+            "actionid": "verifymyidentity",
+            "intend": "Verify",
+            "target": "Identity",
+            "context": null
+        },
+        {
+            "actionid": "verifysourceoffunds",
+            "intend": "Verify",
+            "target": "SourceOfFunds",
+            "context": null
+        },
+        {
+            "actionid": "verifytopup",
+            "intend": "Verify",
+            "target": "TopUp",
+            "context": null
+        },
+        {
+            "actionid": "virtualcardnotworking",
+            "intend": "Resolve",
+            "target": "VirtualCard",
+            "context": "Malfunction"
+        },
+        {
+            "actionid": "visaormastercard",
+            "intend": "Check",
+            "target": "CardNetwork",
+            "context": "Compatibility"
+        },
+        {
+            "actionid": "whyverifyidentity",
+            "intend": "Understand",
+            "target": "IdentityVerification",
+            "context": "Purpose"
+        },
+        {
+            "actionid": "wrongamountofcashreceived",
+            "intend": "Report",
+            "target": "CashWithdrawal",
+            "context": "IncorrectAmount"
+        },
+        {
+            "actionid": "wrongexchangerateforcash_withdrawal",
+            "intend": "Resolve",
+            "target": "CashWithdrawal",
+            "context": "IncorrectExchangeRate"
+        }
+    ]
+}

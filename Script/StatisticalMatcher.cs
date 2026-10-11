@@ -58,9 +58,10 @@ public class StatisticalMatcher : MonoBehaviour, ITrain
         slotMatcher.WordWeight = WordWeight;
     }
 
-    private void Awake()
+    private void Start()
     {
-        usedModel.Model = this;
+        if (usedModel != null)
+            usedModel.Model = this;
     }
 
     // =========================================================
