@@ -1,4 +1,4 @@
-using TMPro;
+/*using TMPro;
 using UnityEngine;
 
 public class PlayGame : MonoBehaviour
@@ -18,8 +18,8 @@ public class PlayGame : MonoBehaviour
         output.text = escapeRoom.OnGameStart;
     }
 
-    private void Respond(EscapeAction action)
+    private void Respond(string action)
     {
         output.text = escapeRoom.Execute(action);
     }
-}
+}*/

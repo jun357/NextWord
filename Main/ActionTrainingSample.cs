@@ -1,38 +1,23 @@
 using System.Collections.Generic;
 
-public class ActionTrainingSample
+public static class Normalizer
 {
+    public const string NULL_ID = "NoAction";
     public const string NULL_LABEL = "NULL";
 
-    public EscapeAction ActionId;
-    public string Intend;
-    public string Target;
+    public static string Normalize(this string text) => string.IsNullOrWhiteSpace(text) ? NULL_LABEL : text;
+}
 
-    public string DisplayText;
+public sealed class ActionTrainingSample
+{
+    public string ActionId { get; }
+    public StatisticalFeature Feature { get; }
 
     public Dictionary<string, float> Positive = new();
 
-    //public Dictionary<string, float> Negative =
-    //    new Dictionary<string, float>();
-
-    public ActionTrainingSample(EscapeAction action)
+    public ActionTrainingSample(string action, StatisticalFeature feature)
     {
         ActionId = action;
-    }
-
-    public string NormalizedIntend
-    {
-        get
-        {
-            return string.IsNullOrWhiteSpace(Intend) ? NULL_LABEL : Intend;
-        }
-    }
-
-    public string NormalizedTarget
-    {
-        get
-        {
-            return string.IsNullOrWhiteSpace(Target) ? NULL_LABEL : Target;
-        }
+        Feature = feature;
     }
 }

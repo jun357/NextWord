@@ -19,8 +19,7 @@ public class SlotMatcher
 
         public bool Explicit;
 
-        public Dictionary<string, float> Scores =
-            new Dictionary<string, float>();
+        public Dictionary<string, (float, int)> Scores = new();
 
         public SlotResult()
         {
@@ -52,10 +51,7 @@ public class SlotMatcher
         IList<ActionTrainingSample> samples,
         string input)
     {
-        return Match(
-            samples,
-            input,
-            x => x.NormalizedIntend);
+        return Match(samples, input, x => x.Feature.Intend);
     }
 
     // =========================================================
@@ -66,10 +62,18 @@ public class SlotMatcher
         IList<ActionTrainingSample> samples,
         string input)
     {
-        return Match(
-            samples,
-            input,
-            x => x.NormalizedTarget);
+        return Match(samples, input, x => x.Feature.Target);
+    }
+
+    // =========================================================
+    // CONTEXT
+    // =========================================================
+
+    public SlotResult MatchContext(
+        IList<ActionTrainingSample> samples,
+        string input)
+    {
+        return Match(samples, input, x => x.Feature.Context);
     }
 
     // =========================================================
@@ -81,15 +85,13 @@ public class SlotMatcher
         string input,
         Func<ActionTrainingSample, string> labelSelector)
     {
-        Dictionary<string, float> labelScores =
-            new Dictionary<string, float>(
+        Dictionary<string, (float, int)> labelScores =
+            new Dictionary<string, (float, int)>(
                 StringComparer.OrdinalIgnoreCase);
 
         foreach (ActionTrainingSample sample in samples)
         {
-            string label =
-                NormalizeLabel(
-                    labelSelector(sample));
+            string label = NormalizeLabel(labelSelector(sample));
 
             float score =
                 scorer.Score(
@@ -99,53 +101,48 @@ public class SlotMatcher
                     WordWeight);
 
             if (!labelScores.ContainsKey(label))
-                labelScores[label] = 0f;
+                labelScores[label] = (0f, 0);
 
             // label을 대표하는 최고 evidence
-            if (score > labelScores[label])
-                labelScores[label] = score;
+            //if (score > labelScores[label])
+            labelScores[label] = (labelScores[label].Item1 + score, labelScores[label].Item2 + 1)
+            // samples.Count
+            ;
         }
 
-        return BuildResult(
-            labelScores);
+        return BuildResult(labelScores);
     }
 
     // =========================================================
     // Result
     // =========================================================
 
-    private SlotResult BuildResult(
-        Dictionary<string, float> scores)
+    public static float ToScore((float, int) entry)
     {
-        SlotResult result =
-            new SlotResult();
+        return entry.Item2 == 0 ? 0 : entry.Item1 / entry.Item2;
+    }
+
+    private SlotResult BuildResult(
+        Dictionary<string, (float, int)> scores)
+    {
+        SlotResult result = new();
 
         result.Scores = scores;
 
         if (scores.Count == 0)
         {
-            result.BestLabel =
-                NULL_LABEL;
+            result.BestLabel = NULL_LABEL;
 
             return result;
         }
 
-        List<KeyValuePair<string, float>> ordered =
-            scores
-                .OrderByDescending(
-                    x => x.Value)
-                .ToList();
+        List<KeyValuePair<string, (float, int)>> ordered = scores.OrderByDescending(x => ToScore(x.Value)).ToList();
 
-        result.BestLabel =
-            ordered[0].Key;
+        result.BestLabel = ordered[0].Key;
 
-        result.BestScore =
-            ordered[0].Value;
+        result.BestScore = ToScore(ordered[0].Value);
 
-        result.SecondScore =
-            ordered.Count >= 2
-                ? ordered[1].Value
-                : 0f;
+        result.SecondScore = ordered.Count >= 2 ? ToScore(ordered[1].Value) : 0f;
 
         if (result.BestScore > 0f)
         {

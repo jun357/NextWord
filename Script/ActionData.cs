@@ -4,16 +4,13 @@ using System.Collections.Generic;
 [Serializable]
 public class ActionDefinition
 {
-    public EscapeAction action_id;
+    public string action_id;
 
-    public string intend;
-    public string target;
-
-    public string display_text;
+    public string intend = Normalizer.NULL_LABEL;
+    public string target = Normalizer.NULL_LABEL;
+    public string context = Normalizer.NULL_LABEL;
 
     public List<string> positive = new();
-
-    //public List<string> negative = new();
 }
 
 [Serializable]

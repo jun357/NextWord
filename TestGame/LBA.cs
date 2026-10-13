@@ -3,10 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using UnityEngine;
-using System.Collections.Concurrent;
-using System.Threading.Tasks;
 
 namespace NaturalLanguageActionClassifier
 {
@@ -17,9 +14,9 @@ namespace NaturalLanguageActionClassifier
     public class TrainingSample
     {
         public string Text { get; }
-        public EscapeAction Action { get; }
+        public string Action { get; }
 
-        public TrainingSample(string text, EscapeAction action)
+        public TrainingSample(string text, string action)
         {
             Text = text;
             Action = action;
@@ -44,10 +41,10 @@ namespace NaturalLanguageActionClassifier
 
     public class Prediction
     {
-        public EscapeAction Action { get; set; }
+        public string Action { get; set; }
         public double Probability { get; set; }
 
-        public Prediction(EscapeAction action, double probability)
+        public Prediction(string action, double probability)
         {
             Action = action;
             Probability = probability;
@@ -85,21 +82,16 @@ namespace NaturalLanguageActionClassifier
         private ActionClassifier model = new(new(), new(), new());
         [SerializeField] private UsedModel usedModel;
 
+        public bool WasPreTrained => pre_trained != null;
+
         private void Start()
         {
             if (usedModel != null)
                 usedModel.Model = this;
         }
 
-        public void Train(ActionDatabase database)
+        public void AutoFit(List<TrainingSample> trainSamples, List<TrainingSample> validationSamples, List<string> ids, Dictionary<string, int> dict)
         {
-            if (pre_trained != null)
-            {
-                UnityEngine.Debug.Log("model found");
-                model = JsonConvert.DeserializeObject<ActionClassifier>(pre_trained.text);
-                return;
-            }
-
             // ------------------------------------------------
             // 분류기 생성 및 학습
             // ------------------------------------------------
@@ -108,24 +100,14 @@ namespace NaturalLanguageActionClassifier
                 "Natural Language -> Action Classifier"
             );
 
-            List<TrainingSample> samples = new();
-            foreach (var sample in database.actions)
-            {
-                if (sample.action_id != EscapeAction.NoAction)
-                {
-                    foreach (string text in sample.positive)
-                    {
-                        samples.Add(new TrainingSample(text, sample.action_id));
-                    }
-                }
-            }
-
             model.Train(
-                samples,
-                validationRatio: 0.2,
+                trainSamples,
+                validationSamples,
+                ids,
+                dict,
                 seed: 42,
-                maxEpochs: 100,
-                maxParallelism: 2
+                maxEpochs: 1,
+                maxParallelism: 3
             );
 
             UnityEngine.Debug.Log(
@@ -135,7 +117,7 @@ namespace NaturalLanguageActionClassifier
             SaveModel();
         }
 
-        public (EscapeAction, string[], double) Predict(string input, int top = 5)
+        public (string, string[], double) Predict(string input, int top = 5)
         {
             var stopwatch = Stopwatch.StartNew();
             var result = model.Predict(input, top);
@@ -149,7 +131,7 @@ namespace NaturalLanguageActionClassifier
 
             string path = System.IO.Path.Combine(
                 Application.persistentDataPath,
-                $"ActionModel_{date}.json"
+                $"LinearModel_{date}.json"
             );
 
             string json = JsonConvert.SerializeObject(
@@ -162,6 +144,17 @@ namespace NaturalLanguageActionClassifier
             UnityEngine.Debug.Log(
                 $"모델 저장 완료: {path}"
             );
+        }
+
+        public void Train(ActionDatabase database)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void LoadModel(ActionDatabase _)
+        {
+            model = JsonConvert.DeserializeObject<ActionClassifier>(pre_trained.text);
+            return;
         }
     }
 }

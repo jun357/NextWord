@@ -1,466 +1,387 @@
 {
-    "actions": [
-        {
-            "actionid": "activatemycard",
+        "activate_my_card": {
             "intend": "Activate",
             "target": "Card",
             "context": null
         },
-        {
-            "actionid": "agelimit",
+        "age_limit": {
             "intend": "Check",
             "target": "Eligibility",
             "context": "AgeRestriction"
         },
-        {
-            "actionid": "applepayorgooglepay",
+        "apple_pay_or_google_pay": {
             "intend": "SetUp",
             "target": "MobilePayment",
             "context": null
         },
-        {
-            "actionid": "atmsupport",
+        "atm_support": {
             "intend": "Check",
             "target": "ATM",
             "context": "Availability"
         },
-        {
-            "actionid": "automatictopup",
+        "automatic_top_up": {
             "intend": "SetUp",
             "target": "TopUp",
             "context": "Automatic"
         },
-        {
-            "actionid": "balancenotupdatedafterbanktransfer",
+        "balance_not_updated_after_bank_transfer": {
             "intend": "Resolve",
             "target": "Balance",
             "context": "NotUpdated"
         },
-        {
-            "actionid": "balancenotupdatedafterchequeorcashdeposit",
+        "balance_not_updated_after_cheque_or_cash_deposit": {
             "intend": "Resolve",
             "target": "Balance",
             "context": "NotUpdated"
         },
-        {
-            "actionid": "beneficiarynotallowed",
+        "beneficiary_not_allowed": {
             "intend": "Resolve",
             "target": "Beneficiary",
             "context": "NotAllowed"
         },
-        {
-            "actionid": "canceltransfer",
+        "cancel_transfer": {
             "intend": "Cancel",
             "target": "Transfer",
             "context": null
         },
-        {
-            "actionid": "cardabouttoexpire",
+        "card_about_to_expire": {
             "intend": "Check",
             "target": "Card",
             "context": "Expiring"
         },
-        {
-            "actionid": "cardacceptance",
+        "card_acceptance": {
             "intend": "Check",
             "target": "Card",
             "context": "Acceptance"
         },
-        {
-            "actionid": "cardarrival",
+        "card_arrival": {
             "intend": "Check",
             "target": "Card",
             "context": "Arrival"
         },
-        {
-            "actionid": "carddeliveryestimate",
+        "card_delivery_estimate": {
             "intend": "Estimate",
             "target": "Card",
             "context": "Delivery"
         },
-        {
-            "actionid": "cardlinking",
+        "card_linking": {
             "intend": "Link",
             "target": "Card",
             "context": null
         },
-        {
-            "actionid": "cardnotworking",
+        "card_not_working": {
             "intend": "Resolve",
             "target": "Card",
             "context": "Malfunction"
         },
-        {
-            "actionid": "cardpaymentfeecharged",
+        "card_payment_fee_charged": {
             "intend": "Understand",
             "target": "CardPayment",
             "context": "Fee"
         },
-        {
-            "actionid": "cardpaymentnotrecognised",
+        "card_payment_not_recognised": {
             "intend": "Report",
             "target": "CardPayment",
             "context": "Unrecognised"
         },
-        {
-            "actionid": "cardpaymentwrongexchangerate",
+        "card_payment_wrong_exchange_rate": {
             "intend": "Resolve",
             "target": "CardPayment",
             "context": "IncorrectExchangeRate"
         },
-        {
-            "actionid": "cardswallowed",
+        "card_swallowed": {
             "intend": "Resolve",
             "target": "Card",
             "context": "RetainedByATM"
         },
-        {
-            "actionid": "cashwithdrawalcharge",
+        "cash_withdrawal_charge": {
             "intend": "Understand",
             "target": "CashWithdrawal",
             "context": "Fee"
         },
-        {
-            "actionid": "cashwithdrawalnotrecognised",
+        "cash_withdrawal_not_recognised": {
             "intend": "Report",
             "target": "CashWithdrawal",
             "context": "Unrecognised"
         },
-        {
-            "actionid": "changepin",
+        "change_pin": {
             "intend": "Change",
             "target": "PIN",
             "context": null
         },
-        {
-            "actionid": "compromisedcard",
+        "compromised_card": {
             "intend": "Secure",
             "target": "Card",
             "context": "Compromised"
         },
-        {
-            "actionid": "contactlessnotworking",
+        "contactless_not_working": {
             "intend": "Resolve",
             "target": "ContactlessPayment",
             "context": "Malfunction"
         },
-        {
-            "actionid": "countrysupport",
+        "country_support": {
             "intend": "Check",
             "target": "Country",
             "context": "Availability"
         },
-        {
-            "actionid": "declinedcardpayment",
+        "declined_card_payment": {
             "intend": "Resolve",
             "target": "CardPayment",
             "context": "Declined"
         },
-        {
-            "actionid": "declinedcashwithdrawal",
+        "declined_cash_withdrawal": {
             "intend": "Resolve",
             "target": "CashWithdrawal",
             "context": "Declined"
         },
-        {
-            "actionid": "declinedtransfer",
+        "declined_transfer": {
             "intend": "Resolve",
             "target": "Transfer",
             "context": "Declined"
         },
-        {
-            "actionid": "directdebitpaymentnotrecognised",
+        "direct_debit_payment_not_recognised": {
             "intend": "Report",
             "target": "DirectDebit",
             "context": "Unrecognised"
         },
-        {
-            "actionid": "disposablecardlimits",
+        "disposable_card_limits": {
             "intend": "Check",
             "target": "DisposableCard",
             "context": "Limits"
         },
-        {
-            "actionid": "editpersonaldetails",
+        "edit_personal_details": {
             "intend": "Edit",
             "target": "PersonalDetails",
             "context": null
         },
-        {
-            "actionid": "exchangecharge",
+        "exchange_charge": {
             "intend": "Understand",
             "target": "CurrencyExchange",
             "context": "Fee"
         },
-        {
-            "actionid": "exchangerate",
+        "exchange_rate": {
             "intend": "Check",
             "target": "CurrencyExchange",
             "context": "ExchangeRate"
         },
-        {
-            "actionid": "exchangeviaapp",
+        "exchange_via_app": {
             "intend": "Exchange",
             "target": "Currency",
             "context": "InApp"
         },
-        {
-            "actionid": "extrachargeonstatement",
+        "extra_charge_on_statement": {
             "intend": "Investigate",
             "target": "StatementCharge",
             "context": "Unexpected"
         },
-        {
-            "actionid": "failedtransfer",
+        "failed_transfer": {
             "intend": "Resolve",
             "target": "Transfer",
             "context": "Failed"
         },
-        {
-            "actionid": "fiatcurrencysupport",
+        "fiat_currency_support": {
             "intend": "Check",
             "target": "FiatCurrency",
             "context": "Availability"
         },
-        {
-            "actionid": "getdisposablevirtualcard",
+        "get_disposable_virtual_card": {
             "intend": "Get",
             "target": "VirtualCard",
             "context": "Disposable"
         },
-        {
-            "actionid": "getphysicalcard",
+        "get_physical_card": {
             "intend": "Get",
             "target": "PhysicalCard",
             "context": null
         },
-        {
-            "actionid": "gettingsparecard",
+        "getting_spare_card": {
             "intend": "Get",
             "target": "Card",
             "context": "Spare"
         },
-        {
-            "actionid": "gettingvirtualcard",
+        "getting_virtual_card": {
             "intend": "Get",
             "target": "VirtualCard",
             "context": null
         },
-        {
-            "actionid": "lostorstolencard",
+        "lost_or_stolen_card": {
             "intend": "Report",
             "target": "Card",
             "context": "LostOrStolen"
         },
-        {
-            "actionid": "lostorstolenphone",
+        "lost_or_stolen_phone": {
             "intend": "Report",
             "target": "Phone",
             "context": "LostOrStolen"
         },
-        {
-            "actionid": "orderphysicalcard",
+        "order_physical_card": {
             "intend": "Order",
             "target": "PhysicalCard",
             "context": null
         },
-        {
-            "actionid": "passcodeforgotten",
+        "passcode_forgotten": {
             "intend": "Recover",
             "target": "Passcode",
             "context": "Forgotten"
         },
-        {
-            "actionid": "pendingcardpayment",
+        "pending_card_payment": {
             "intend": "Check",
             "target": "CardPayment",
             "context": "Pending"
         },
-        {
-            "actionid": "pendingcashwithdrawal",
+        "pending_cash_withdrawal": {
             "intend": "Check",
             "target": "CashWithdrawal",
             "context": "Pending"
         },
-        {
-            "actionid": "pendingtopup",
+        "pending_top_up": {
             "intend": "Check",
             "target": "TopUp",
             "context": "Pending"
         },
-        {
-            "actionid": "pendingtransfer",
+        "pending_transfer": {
             "intend": "Check",
             "target": "Transfer",
             "context": "Pending"
         },
-        {
-            "actionid": "pinblocked",
+        "pin_blocked": {
             "intend": "Unblock",
             "target": "PIN",
             "context": "Blocked"
         },
-        {
-            "actionid": "receivingmoney",
+        "receiving_money": {
             "intend": "Receive",
             "target": "Money",
             "context": null
         },
-        {
-            "actionid": "Refundnotshowingup",
+        "Refund_not_showing_up": {
             "intend": "Resolve",
             "target": "Refund",
             "context": "Missing"
         },
-        {
-            "actionid": "requestrefund",
+        "request_refund": {
             "intend": "Request",
             "target": "Refund",
             "context": null
         },
-        {
-            "actionid": "revertedcardpayment",
+        "reverted_card_payment?": {
             "intend": "Understand",
             "target": "CardPayment",
             "context": "Reverted"
         },
-        {
-            "actionid": "supportedcardsandcurrencies",
+        "supported_cards_and_currencies": {
             "intend": "Check",
             "target": "PaymentMethods",
             "context": "Compatibility"
         },
-        {
-            "actionid": "terminateaccount",
+        "terminate_account": {
             "intend": "Terminate",
             "target": "Account",
             "context": null
         },
-        {
-            "actionid": "topupbybanktransfercharge",
+        "top_up_by_bank_transfer_charge": {
             "intend": "Understand",
             "target": "TopUp",
             "context": "BankTransferFee"
         },
-        {
-            "actionid": "topupbycardcharge",
+        "top_up_by_card_charge": {
             "intend": "Understand",
             "target": "TopUp",
             "context": "CardFee"
         },
-        {
-            "actionid": "topupbycashorcheque",
+        "top_up_by_cash_or_cheque": {
             "intend": "TopUp",
             "target": "Account",
             "context": "CashOrCheque"
         },
-        {
-            "actionid": "topupfailed",
+        "top_up_failed": {
             "intend": "Resolve",
             "target": "TopUp",
             "context": "Failed"
         },
-        {
-            "actionid": "topuplimits",
+        "top_up_limits": {
             "intend": "Check",
             "target": "TopUp",
             "context": "Limits"
         },
-        {
-            "actionid": "topupreverted",
+        "top_up_reverted": {
             "intend": "Resolve",
             "target": "TopUp",
             "context": "Reverted"
         },
-        {
-            "actionid": "toppingupbycard",
+        "topping_up_by_card": {
             "intend": "TopUp",
             "target": "Account",
             "context": "ByCard"
         },
-        {
-            "actionid": "transactionchargedtwice",
+        "transaction_charged_twice": {
             "intend": "Resolve",
             "target": "Transaction",
             "context": "DuplicateCharge"
         },
-        {
-            "actionid": "transferfeecharged",
+        "transfer_fee_charged": {
             "intend": "Understand",
             "target": "Transfer",
             "context": "Fee"
         },
-        {
-            "actionid": "transferintoaccount",
+        "transfer_into_account": {
             "intend": "Transfer",
             "target": "Account",
             "context": "Incoming"
         },
-        {
-            "actionid": "transfernotreceivedbyrecipient",
+        "transfer_not_received_by_recipient": {
             "intend": "Resolve",
             "target": "Transfer",
             "context": "NotReceived"
         },
-        {
-            "actionid": "transfertiming",
+        "transfer_timing": {
             "intend": "Check",
             "target": "Transfer",
             "context": "Timing"
         },
-        {
-            "actionid": "unabletoverifyidentity",
+        "unable_to_verify_identity": {
             "intend": "Resolve",
             "target": "IdentityVerification",
             "context": "Failed"
         },
-        {
-            "actionid": "verifymyidentity",
+        "verify_my_identity": {
             "intend": "Verify",
             "target": "Identity",
             "context": null
         },
-        {
-            "actionid": "verifysourceoffunds",
+        "verify_source_of_funds": {
             "intend": "Verify",
             "target": "SourceOfFunds",
             "context": null
         },
-        {
-            "actionid": "verifytopup",
+        "verify_top_up": {
             "intend": "Verify",
             "target": "TopUp",
             "context": null
         },
-        {
-            "actionid": "virtualcardnotworking",
+        "virtual_card_not_working": {
             "intend": "Resolve",
             "target": "VirtualCard",
             "context": "Malfunction"
         },
-        {
-            "actionid": "visaormastercard",
+        "visa_or_mastercard": {
             "intend": "Check",
             "target": "CardNetwork",
             "context": "Compatibility"
         },
-        {
-            "actionid": "whyverifyidentity",
+        "why_verify_identity": {
             "intend": "Understand",
             "target": "IdentityVerification",
             "context": "Purpose"
         },
-        {
-            "actionid": "wrongamountofcashreceived",
+        "wrong_amount_of_cash_received": {
             "intend": "Report",
             "target": "CashWithdrawal",
             "context": "IncorrectAmount"
         },
-        {
-            "actionid": "wrongexchangerateforcash_withdrawal",
+        "wrong_exchange_rate_for_cash_withdrawal": {
             "intend": "Resolve",
             "target": "CashWithdrawal",
             "context": "IncorrectExchangeRate"
         }
-    ]
 }

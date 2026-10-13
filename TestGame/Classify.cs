@@ -15,9 +15,9 @@ namespace NaturalLanguageActionClassifier
         private SoftmaxClassifier classifier;
         public SoftmaxClassifier softmaxClassifier => classifier;
 
-        private readonly List<EscapeAction> actions = new();
+        private List<string> actions;
 
-        public IReadOnlyList<EscapeAction> Actions => actions;
+        public IReadOnlyList<string> Actions => actions;
         //public int VocabularySize => vectorizer.VocabularySize;
 
         public double BestLearningRate { get; private set; }
@@ -29,7 +29,7 @@ namespace NaturalLanguageActionClassifier
         public ActionClassifier(
             TextVectorizer textVectorizer,
             SoftmaxClassifier softmaxClassifier,
-            List<EscapeAction> Actions)
+            List<string> Actions)
         {
             vectorizer = textVectorizer
                 ?? throw new ArgumentNullException(nameof(vectorizer));
@@ -42,75 +42,31 @@ namespace NaturalLanguageActionClassifier
         }
 
         public void Train(
-            List<TrainingSample> samples,
-            double validationRatio = 0.2,
-            int seed = 42,
-            int maxEpochs = 800,
-            int maxParallelism = 2)
+            List<TrainingSample> trainSamples,
+            List<TrainingSample> validationSamples,
+            List<string> actions,
+            Dictionary<string, int> labelToIndex,
+            int seed,
+            int maxEpochs,
+            int maxParallelism)
         {
-            if (samples == null || samples.Count == 0)
+            if (trainSamples == null || trainSamples.Count == 0)
                 throw new ArgumentException("학습 데이터가 없습니다.");
 
-            if (validationRatio <= 0 || validationRatio >= 1)
-                throw new ArgumentOutOfRangeException(
-                    nameof(validationRatio));
+            if (validationSamples == null || validationSamples.Count == 0)
+                throw new InvalidOperationException("Validation 데이터가 없습니다.");
 
-            if (samples.Any(s =>
-                s == null || string.IsNullOrWhiteSpace(s.Text)))
+            if (trainSamples.Any(s => s == null || string.IsNullOrWhiteSpace(s.Text))
+                || validationSamples.Any(s => s == null || string.IsNullOrWhiteSpace(s.Text)))
             {
-                throw new ArgumentException(
-                    "빈 문장 또는 null 학습 데이터가 있습니다.");
+                throw new ArgumentException("빈 문장 또는 null 학습 데이터가 있습니다.");
             }
 
             // Action 목록 초기화
-            actions.Clear();
-
-            actions.AddRange(
-                samples
-                    .Select(s => s.Action)
-                    .Where(a => a != EscapeAction.NoAction)
-                    .Distinct()
-                    .OrderBy(a => a));
+            this.actions = actions;
 
             if (actions.Count == 0)
-                throw new InvalidOperationException(
-                    "학습 가능한 Action이 없습니다.");
-
-            var labelToIndex = new Dictionary<EscapeAction, int>();
-
-            for (int i = 0; i < actions.Count; i++)
-                labelToIndex[actions[i]] = i;
-
-            // Action별로 Train / Validation 분리
-            var random = new System.Random(seed);
-
-            var trainSamples = new List<TrainingSample>();
-            var validationSamples = new List<TrainingSample>();
-
-            foreach (var group in samples
-                .Where(s => labelToIndex.ContainsKey(s.Action))
-                .GroupBy(s => s.Action))
-            {
-                var shuffled = group.OrderBy(_ => random.Next()).ToList();
-
-                int validationCount = (int)Math.Round(
-                    shuffled.Count * validationRatio);
-
-                // 각 Action의 Train 데이터는 최소 1개 유지
-                validationCount = Math.Min(
-                    validationCount,
-                    Math.Max(0, shuffled.Count - 1));
-
-                validationSamples.AddRange(
-                    shuffled.Take(validationCount));
-
-                trainSamples.AddRange(
-                    shuffled.Skip(validationCount));
-            }
-
-            if (validationSamples.Count == 0)
-                throw new InvalidOperationException(
-                    "Validation 데이터가 없습니다.");
+                throw new InvalidOperationException("학습 가능한 Action이 없습니다.");
 
             // Vocabulary는 Train 데이터만 사용해 학습
             vectorizer.Fit(
@@ -142,7 +98,8 @@ namespace NaturalLanguageActionClassifier
             // 각 LR 후보는 독립적인 모델을 사용
             double[] learningRates =
             {
-                0.01, 0.03, 0.1, 0.3
+                //0.01, 0.03, 0.1, 0.3
+                0.4
             };
 
             var results = new System.Collections.Concurrent
@@ -157,60 +114,60 @@ namespace NaturalLanguageActionClassifier
             };
 
             Parallel.ForEach(
-                learningRates,
-                options,
-                learningRate =>
-                {
-                    var candidate = new SoftmaxClassifier();
+            learningRates,
+            options,
+            learningRate =>
+            {
+                var candidate = new SoftmaxClassifier();
 
-                    candidate.InitializeFeatureCount(
-                        vectorizer.VocabularySize);
+                candidate.InitializeFeatureCount(
+                    vectorizer.VocabularySize);
 
-                    candidate.Fit(
-                        trainX,
-                        trainY,
-                        validationX,
-                        validationY,
-                        actions,
-                        learningRate,
-                        maxEpochs,
-                        seed,
-                        (epoch, accuracy, loss) =>
-                        {
-                                // 중간 평가 로그는 필요할 때만 출력
-                                if (epoch == 1 ||
-                                        epoch % 100 == 0 ||
-                                        epoch == maxEpochs)
-                            {
-                                lock (Console.Out)
-                                {
-                                    Debug.Log(
-                                        $"[Tune] LR={learningRate:F3}, " +
-                                        $"Epoch={epoch}, " +
-                                        $"ValAcc={accuracy:P2}, " +
-                                        $"ValLoss={loss:F4}");
-                                }
-                            }
-                        });
-
-                    var metrics = candidate.Evaluate(
-                        validationX, validationY);
-
-                    results.Add(new TuningResult
+                candidate.Fit(
+                    trainX,
+                    trainY,
+                    validationX,
+                    validationY,
+                    actions,
+                    learningRate,
+                    maxEpochs,
+                    seed,
+                    onEpoch: (epoch, accuracy, loss) =>
                     {
-                        LearningRate = learningRate,
-                        Epochs = maxEpochs,
-                        Accuracy = metrics.accuracy,
-                        Loss = metrics.loss,
-                        Model = candidate
-                    });
+                        // 중간 평가 로그는 필요할 때만 출력
+                        if (epoch % 100 == 0 || epoch == maxEpochs)
+                        {
+                            lock (Console.Out)
+                            {
+                                Debug.Log(
+                                $"[Tune] LR={learningRate:F3}, " +
+                                $"Epoch={epoch}, " +
+                                $"ValAcc={accuracy:P2}, " +
+                                $"ValLoss={loss:F4}");
+                            }
+                        }
+                    },
+                    evalStep: 10,
+                    patience: 5,
+                    minDelta: 0.0001);
+
+                var metrics = candidate.Evaluate(validationX, validationY);
+
+                results.Add(new TuningResult
+                {
+                    LearningRate = learningRate,
+                    Epochs = maxEpochs,
+                    Accuracy = metrics.accuracy,
+                    Loss = metrics.loss,
+                    Model = candidate
                 });
+            });
 
             // Accuracy 우선, 동률이면 Loss가 낮은 모델 선택
             var best = results
-                .OrderByDescending(r => r.Accuracy)
-                .ThenBy(r => r.Loss)
-                .First();
+            .OrderByDescending(r => r.Accuracy)
+            .ThenBy(r => r.Loss)
+            .First();
 
             classifier = best.Model;
 
@@ -220,10 +177,17 @@ namespace NaturalLanguageActionClassifier
             BestValidationLoss = best.Loss;
 
             Debug.Log(
-                $"[Best Model] LR={BestLearningRate:F3}, " +
-                $"Epoch={BestEpoch}, " +
-                $"ValAcc={BestValidationAccuracy:P2}, " +
-                $"ValLoss={BestValidationLoss:F4}");
+            $"[Best Model] LR={BestLearningRate:F3}, " +
+            $"Epoch={BestEpoch}, " +
+            $"ValAcc={BestValidationAccuracy:P2}, " +
+            $"ValLoss={BestValidationLoss:F4}");
+
+            double avg = trainX.Average(x => x.Indices.Length);
+            int max = trainX.Max(x => x.Indices.Length);
+
+            Debug.Log(
+                $"[Sparse] Vocab={vectorizer.VocabularySize}, " +
+                $"AvgNonZero={avg:F1}, MaxNonZero={max}");
         }
 
         public List<Prediction> Predict(
@@ -234,7 +198,7 @@ namespace NaturalLanguageActionClassifier
             {
                 return new List<Prediction>
                 {
-                    new Prediction(EscapeAction.NoAction, 1.0)
+                    new Prediction(Normalizer.NULL_ID, 1.0)
                 };
             }
 
@@ -260,7 +224,7 @@ namespace NaturalLanguageActionClassifier
             if (best.Probability < threshold)
             {
                 return new Prediction(
-                    EscapeAction.NoAction,
+                    Normalizer.NULL_ID,
                     best.Probability);
             }
 

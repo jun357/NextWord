@@ -1,4 +1,4 @@
-public sealed class EscapeRoom
+/*public sealed class EscapeRoom
 {
     public GameState State { get; } = new();
 
@@ -253,4 +253,4 @@ public sealed class EscapeRoom
     {
         return "시간이 흐른다... 특별한 변화는 없다.";
     }
-}
+}*/

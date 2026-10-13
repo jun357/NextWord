@@ -1,12 +1,57 @@
+using NaturalLanguageActionClassifier;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using UnityEngine;
 
+[Serializable]
+public readonly struct StatisticalFeature
+{
+    private readonly string intend;
+    public string Intend => intend ?? Normalizer.NULL_LABEL;
+    private readonly string target;
+    public string Target => target ?? Normalizer.NULL_LABEL;
+    private readonly string context;
+    public string Context => context ?? Normalizer.NULL_LABEL;
+
+    [JsonConstructor]
+    public StatisticalFeature(string Intend, string Target, string Context)
+    {
+        intend = Intend;
+        target = Target;
+        context = Context;
+    }
+}
+
+[Serializable]
+public readonly struct StatisticalWeight
+{
+    public readonly float intendWeight;
+    public readonly float targetWeight;
+    public readonly float contextWeight;
+    public readonly float characterWeight;
+    public readonly float wordWeight;
+
+    [JsonConstructor]
+    public StatisticalWeight(float w1, float w2, float w3, float w4, float w5)
+    {
+        intendWeight = w1;
+        targetWeight = w2;
+        contextWeight = w3;
+        characterWeight = w4;
+        wordWeight = w5;
+    }
+}
+
 public class StatisticalMatcher : MonoBehaviour, ITrain
 {
+    [Header("JSON")] public TextAsset pre_trained;
+    public TextAsset label_data;
+    private Dictionary<string, StatisticalFeature> feature_table;
     [SerializeField] private UsedModel usedModel;
+    [SerializeField] private WeightOptimizer optimizer;
 
     // =========================================================
     // Components
@@ -24,13 +69,40 @@ public class StatisticalMatcher : MonoBehaviour, ITrain
     // Weights
     // =========================================================
 
-    public float IntendWeight { get; set; } = 1.5f;
+    private StatisticalWeight? _weight;
+    private StatisticalWeight Weight
+    {
+        get
+        {
+            if (_weight == null)
+            {
+                if (pre_trained == null)
+                {
+                    _weight = new(1f, 1f, 0, 1f, 1f);
+                }
+                else
+                {
+                    _weight = JsonConvert.DeserializeObject<StatisticalWeight>(pre_trained.text);
+                }
+            }
+                
+            return (StatisticalWeight)_weight;
+        }
+        set
+        {
+            _weight = value;
+        }
+    }
 
-    public float TargetWeight { get; set; } = 1.5f;
+    public float IntendWeight => Weight.intendWeight;
 
-    public float CharacterWeight { get; set; } = 1.0f;
+    public float TargetWeight => Weight.targetWeight;
 
-    public float WordWeight { get; set; } = 1.0f;
+    public float CharacterWeight => Weight.characterWeight;
+
+    public float WordWeight => Weight.wordWeight;
+
+    public bool WasPreTrained => pre_trained != null;
 
     //public float ContextWeight { get; set; } = 0.25f;
 
@@ -54,12 +126,13 @@ public class StatisticalMatcher : MonoBehaviour, ITrain
     private void MakeSlotMatcher()
     {
         slotMatcher = new(featureScorer);
-        slotMatcher.CharacterWeight = CharacterWeight;
-        slotMatcher.WordWeight = WordWeight;
+        slotMatcher.CharacterWeight = 1f;
+        slotMatcher.WordWeight = 1f;
     }
 
     private void Start()
     {
+        feature_table = JsonConvert.DeserializeObject<Dictionary<string, StatisticalFeature>>(label_data.text);
         if (usedModel != null)
             usedModel.Model = this;
     }
@@ -92,6 +165,35 @@ public class StatisticalMatcher : MonoBehaviour, ITrain
 
     void ITrain.Train(ActionDatabase database) => Build(database);
 
+    private void Build(List<TrainingSample> trainSamples, Dictionary<string, StatisticalFeature> feature_table)
+    {
+        MakeSlotMatcher();
+
+        Dictionary<string, ActionTrainingSample> sampleCache = new();
+
+        foreach (TrainingSample trainSample in trainSamples)
+        {
+            if (!sampleCache.TryGetValue(trainSample.Action, out ActionTrainingSample sample))
+            {
+                sample = new(trainSample.Action, feature_table.GetValueOrDefault(trainSample.Action));
+                sampleCache[trainSample.Action] = sample;
+            }
+
+            AddFeatures(sample.Positive, trainSample.Text.Normalize(), 1f);
+
+            //samples.Add(sample);
+        }
+
+        samples.Clear();
+        foreach (var sample in sampleCache.Values)
+        {
+            NormalizeDictionary(sample.Positive);
+            samples.Add(sample);
+        }
+
+        featureScorer.Build(samples);
+    }
+    
     private void Build(ActionDatabase database)
     {
         MakeSlotMatcher();
@@ -102,22 +204,7 @@ public class StatisticalMatcher : MonoBehaviour, ITrain
             ActionDefinition definition
             in database.actions)
         {
-            ActionTrainingSample sample = new(definition.action_id);
-
-            sample.Intend =
-                string.IsNullOrWhiteSpace(
-                    definition.intend)
-                    ? null
-                    : definition.intend;
-
-            sample.Target =
-                string.IsNullOrWhiteSpace(
-                    definition.target)
-                    ? null
-                    : definition.target;
-
-            sample.DisplayText =
-                definition.display_text;
+            ActionTrainingSample sample = new(definition.action_id, new(definition.intend, definition.target, definition.context));
 
             foreach (
                 string text
@@ -151,10 +238,10 @@ public class StatisticalMatcher : MonoBehaviour, ITrain
             samples);
     }
 
-    public (EscapeAction, string[], double) Predict(string input, int top = 5)
+    public (string, string[], double) Predict(string input, int top = 5)
     {
         var stopwatch = Stopwatch.StartNew();
-        var result = Match(input, top);
+        var result = Match(input, Weight, top);
         stopwatch.Stop();
         return (result[0].ActionId, result.Select(x => x.ToString()).ToArray(), stopwatch.Elapsed.TotalMilliseconds);
     }
@@ -165,8 +252,7 @@ public class StatisticalMatcher : MonoBehaviour, ITrain
 
     public IReadOnlyList<MatchResult> Match(
         string currentInput,
-        //string previousActionId = null,
-        //string focusTarget = null,
+        StatisticalWeight weight,
         int topK = 5)
     {
         if (string.IsNullOrWhiteSpace(currentInput))
@@ -195,6 +281,15 @@ public class StatisticalMatcher : MonoBehaviour, ITrain
                 current);
 
         // -----------------------------------------
+        // TARGET
+        // -----------------------------------------
+
+        SlotMatcher.SlotResult context =
+            slotMatcher.MatchContext(
+                samples,
+                current);
+
+        // -----------------------------------------
         // Action candidates
         // -----------------------------------------
 
@@ -202,41 +297,9 @@ public class StatisticalMatcher : MonoBehaviour, ITrain
 
         foreach (ActionTrainingSample sample in samples)
         {
-            float intendScore =
-                GetSlotScore(
-                    intent,
-                    sample.NormalizedIntend);
-
-            float targetScore =
-                GetSlotScore(
-                    target,
-                    sample.NormalizedTarget);
-
-            // -----------------------------------------
-            // Explicit slot conflict
-            // -----------------------------------------
-
-            if (intent.Explicit &&
-                !string.Equals(
-                    sample.NormalizedIntend,
-                    intent.BestLabel,
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                intendScore *= 0.10f;
-            }
-
-            if (target.Explicit &&
-                !string.Equals(
-                    sample.NormalizedTarget,
-                    target.BestLabel,
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                targetScore *= 0.10f;
-            }
-
-            // -----------------------------------------
-            // Features
-            // -----------------------------------------
+            float intendScore = GetSlotScore(intent, sample.Feature.Intend);
+            float targetScore = GetSlotScore(target, sample.Feature.Target);
+            float contextScore = GetSlotScore(context, sample.Feature.Context);
 
             float characterScore =
                 featureScorer.ScoreCharacter(
@@ -248,87 +311,35 @@ public class StatisticalMatcher : MonoBehaviour, ITrain
                     sample,
                     current);
 
-            // -----------------------------------------
-            // Context
-            // -----------------------------------------
-
-            //float contextScore = 0f;
-
-            // -----------------------------------------
-            // Personal
-            // -----------------------------------------
-
-            //float personalScore =
-            //    ScorePersonal(
-            //        sample.ActionId,
-            //        current);
-
-            // -----------------------------------------
-            // Focus
-            // -----------------------------------------
-
-            /*float focusScore = 0f;
-
-            bool focusUsed = false;
-
-            if (!target.Explicit &&
-                !string.IsNullOrWhiteSpace(
-                    focusTarget) &&
-                string.Equals(
-                    sample.NormalizedTarget,
-                    focusTarget,
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                focusScore = 1f;
-                focusUsed = true;
-            }*/
-
-            // -----------------------------------------
-            // Final
-            // -----------------------------------------
-
             float finalScore =
-            intendScore * IntendWeight
+            intendScore * weight.intendWeight
 
-            + targetScore * TargetWeight
+            + targetScore * weight.targetWeight
 
-            + characterScore * CharacterWeight
+            + contextScore * weight.contextWeight
 
-            + wordScore * WordWeight
+            + characterScore * weight.characterWeight
 
-            //+ contextScore * ContextWeight
-
-            //+ personalScore * PersonalWeight
-
-            //+ focusScore * FocusWeight
-
+            + wordScore * weight.wordWeight
             ;
 
             results.Add(
                 new MatchResult(
                     sample.ActionId,
 
-                    sample.Intend,
-                    sample.Target,
-
-                    sample.DisplayText,
+                    sample.Feature,
 
                     intendScore,
                     targetScore,
+                    contextScore,
 
                     characterScore,
                     wordScore,
-
-                    //contextScore,
-                    //personalScore,
-                    //focusScore,
 
                     finalScore,
 
                     intent.Explicit,
                     target.Explicit
-
-                    //focusUsed
                     ));
         }
 
@@ -364,11 +375,9 @@ public class StatisticalMatcher : MonoBehaviour, ITrain
             return 0f;
         }
 
-        if (result.Scores.TryGetValue(
-                label,
-                out float score))
+        if (result.Scores.TryGetValue(label, out (float, int) entry))
         {
-            return score;
+            return SlotMatcher.ToScore(entry);
         }
 
         return 0f;
@@ -412,19 +421,16 @@ public class StatisticalMatcher : MonoBehaviour, ITrain
         if (dictionary.Count == 0)
             return;
 
-        float max =
-            dictionary.Values.Max();
+        float max = dictionary.Values.Max();
 
         if (max <= 0f)
             return;
 
-        List<string> keys =
-            dictionary.Keys.ToList();
+        List<string> keys = dictionary.Keys.ToList();
 
         foreach (string key in keys)
         {
-            dictionary[key] /=
-                max;
+            dictionary[key] /= max;
         }
     }
 
@@ -499,5 +505,16 @@ public class StatisticalMatcher : MonoBehaviour, ITrain
 
             map[gram] += 1f;
         }
+    }
+
+    public void AutoFit(List<TrainingSample> trainSamples, List<TrainingSample> validationSamples, List<string> ids, Dictionary<string, int> dict)
+    {
+        Build(trainSamples, feature_table);
+        optimizer.OptimizeWeights(validationSamples);
+    }
+
+    public void LoadModel(ActionDatabase database)
+    {
+        Build(database);
     }
 }

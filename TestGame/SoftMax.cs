@@ -9,75 +9,122 @@ namespace NaturalLanguageActionClassifier
     {
         [Newtonsoft.Json.JsonProperty] private double[,] weights;
         [Newtonsoft.Json.JsonProperty] private double[] bias;
-        [Newtonsoft.Json.JsonProperty] private List<EscapeAction> labels;
+        [Newtonsoft.Json.JsonProperty] private List<string> labels;
 
         [Newtonsoft.Json.JsonProperty] private int classCount;
         [Newtonsoft.Json.JsonProperty] private int featureCount;
 
-        [Newtonsoft.Json.JsonIgnore] public IReadOnlyList<EscapeAction> Labels => labels;
+        [Newtonsoft.Json.JsonIgnore] public IReadOnlyList<string> Labels => labels;
 
         public (double accuracy, double loss) Evaluate(
-            SparseVector[] x, int[] y)
+    SparseVector[] x,
+    int[] y)
         {
+            if (x == null || x.Length == 0)
+                return (0, 0);
+
+            if (y == null || y.Length != x.Length)
+                throw new ArgumentException(
+                    "평가 데이터와 레이블 길이가 다릅니다.");
+
             int correct = 0;
             double loss = 0;
 
+            double[] probabilityBuffer = new double[classCount];
+
             for (int i = 0; i < x.Length; i++)
             {
-                double[] p = PredictProbabilities(x[i]);
+                PredictProbabilities(x[i], probabilityBuffer);
 
-                if (ArgMax(p) == y[i])
+                int predicted = ArgMax(probabilityBuffer);
+                int target = y[i];
+
+                if (predicted == target)
                     correct++;
 
                 loss -= Math.Log(
-                    Math.Max(1e-15, p[y[i]]));
+                    Math.Max(1e-15, probabilityBuffer[target]));
             }
 
             return (
-                x.Length == 0 ? 0 : (double)correct / x.Length,
-                x.Length == 0 ? 0 : loss / x.Length
+                (double)correct / x.Length,
+                loss / x.Length
             );
         }
 
         public void Fit(
-            SparseVector[] trainX,
-            int[] trainY,
-            SparseVector[] valX,
-            int[] valY,
-            List<EscapeAction> classLabels,
-            double learningRate,
-            int maxEpochs,
-            int seed,
-            Action<int, double, double> onEpoch = null)
+    SparseVector[] trainX,
+    int[] trainY,
+    SparseVector[] valX,
+    int[] valY,
+    List<string> classLabels,
+    double learningRate,
+    int maxEpochs,
+    int seed,
+    Action<int, double, double> onEpoch = null,
+    int evalStep = 50,
+    int patience = 5,
+    double minDelta = 0.0001
+)
         {
             if (trainX == null || trainX.Length == 0)
                 throw new ArgumentException("Train 데이터가 없습니다.");
 
-            labels = new List<EscapeAction>(classLabels);
+            if (trainY == null || trainY.Length != trainX.Length)
+                throw new ArgumentException(
+                    "Train 데이터와 레이블 길이가 다릅니다.");
+
+            if (evalStep <= 0)
+                throw new ArgumentOutOfRangeException(nameof(evalStep));
+
+            if (maxEpochs <= 0)
+                throw new ArgumentOutOfRangeException(nameof(maxEpochs));
+
+            if (patience <= 0)
+                throw new ArgumentOutOfRangeException(nameof(patience));
+
+            if (minDelta < 0 || double.IsNaN(minDelta))
+                throw new ArgumentOutOfRangeException(nameof(minDelta));
+
+            if (classLabels == null || classLabels.Count == 0)
+                throw new ArgumentException("클래스가 없습니다.");
+
+            labels = new List<string>(classLabels);
             classCount = labels.Count;
 
-            // 전체 Vocabulary 크기를 외부에서 전달할 수 없으므로
-            // 호출 전에 InitializeFeatureCount를 사용합니다.
             if (featureCount <= 0)
                 throw new InvalidOperationException(
                     "Feature 수가 초기화되지 않았습니다.");
 
+            if (valX != null && valY == null)
+                throw new ArgumentException("Validation 레이블이 없습니다.");
+
+            if (valX != null && valX.Length != valY.Length)
+                throw new ArgumentException(
+                    "Validation 데이터와 레이블 길이가 다릅니다.");
+
             weights = new double[classCount, featureCount];
             bias = new double[classCount];
+
+            double[] probabilityBuffer = new double[classCount];
 
             var random = new Random(seed);
             var order = Enumerable.Range(0, trainX.Length).ToArray();
 
-            // Best validation checkpoint
             double bestLoss = double.PositiveInfinity;
             double[,] bestWeights = null;
             double[] bestBias = null;
 
+            int bestEpoch = 0;
+            int evaluationsWithoutImprovement = 0;
+
             const double l2 = 0.0001;
+
+            bool hasValidation = valX != null && valX.Length > 0;
 
             for (int epoch = 1; epoch <= maxEpochs; epoch++)
             {
-                // 매 Epoch 데이터 순서 섞기
+                // Fisher-Yates shuffle
                 for (int i = order.Length - 1; i > 0; i--)
                 {
                     int j = random.Next(i + 1);
@@ -87,21 +134,30 @@ namespace NaturalLanguageActionClassifier
                 foreach (int sample in order)
                 {
                     SparseVector vector = trainX[sample];
-                    double[] p = PredictProbabilities(vector);
+
+                    PredictProbabilities(vector, probabilityBuffer);
+
                     int target = trainY[sample];
+
+                    if ((uint)target >= (uint)classCount)
+                        throw new ArgumentOutOfRangeException(
+                            nameof(trainY),
+                            "Train 레이블 인덱스가 클래스 범위를 벗어났습니다.");
 
                     for (int c = 0; c < classCount; c++)
                     {
                         double error =
-                            p[c] - (c == target ? 1.0 : 0.0);
+                            probabilityBuffer[c] -
+                            (c == target ? 1.0 : 0.0);
 
                         bias[c] -= learningRate * error;
 
-                        for (int j = 0;
-                             j < vector.Indices.Length;
-                             j++)
+                        for (int j = 0; j < vector.Indices.Length; j++)
                         {
                             int f = vector.Indices[j];
+
+                            if ((uint)f >= (uint)featureCount)
+                                continue;
 
                             weights[c, f] -= learningRate *
                                 (error * vector.Values[j]
@@ -110,23 +166,45 @@ namespace NaturalLanguageActionClassifier
                     }
                 }
 
-                // Validation은 각 Epoch 종료 후 실행
-                if (valX != null && valX.Length > 0)
+                // Validation이 없는 경우 조기 종료를 적용하지 않음
+                if (!hasValidation)
+                    continue;
+
+                // evalStep마다 평가하고 마지막 Epoch에서도 평가
+                if (epoch % evalStep != 0 && epoch != maxEpochs)
+                    continue;
+
+                var metrics = Evaluate(valX, valY);
+
+                onEpoch?.Invoke(
+                    epoch,
+                    metrics.accuracy,
+                    metrics.loss);
+
+                // minDelta 이상 개선된 경우에만 Best 모델 갱신
+                if (metrics.loss < bestLoss - minDelta)
                 {
-                    var metrics = Evaluate(valX, valY);
+                    bestLoss = metrics.loss;
+                    bestEpoch = epoch;
 
-                    onEpoch?.Invoke(
-                        epoch, metrics.accuracy, metrics.loss);
+                    bestWeights = (double[,])weights.Clone();
+                    bestBias = (double[])bias.Clone();
 
-                    if (metrics.loss < bestLoss)
-                    {
-                        bestLoss = metrics.loss;
-                        bestWeights = (double[,])weights.Clone();
-                        bestBias = (double[])bias.Clone();
-                    }
+                    evaluationsWithoutImprovement = 0;
+                }
+                else
+                {
+                    evaluationsWithoutImprovement++;
+                }
+
+                // 일정 횟수 동안 개선되지 않으면 학습 종료
+                if (evaluationsWithoutImprovement >= patience)
+                {
+                    break;
                 }
             }
 
+            // Validation Loss가 가장 낮았던 모델 복원
             if (bestWeights != null)
             {
                 weights = bestWeights;
@@ -150,8 +228,7 @@ namespace NaturalLanguageActionClassifier
             var probabilities = PredictProbabilities(x);
 
             return Enumerable.Range(0, classCount)
-                .Select(i => new Prediction(
-                    labels[i], probabilities[i]))
+                .Select(i => new Prediction(labels[i], probabilities[i]))
                 .OrderByDescending(p => p.Probability)
                 .Take(topN)
                 .ToList();
@@ -159,7 +236,16 @@ namespace NaturalLanguageActionClassifier
 
         private double[] PredictProbabilities(SparseVector x)
         {
-            double[] scores = new double[classCount];
+            var scores = new double[classCount];
+            PredictProbabilities(x, scores);
+            return scores;
+        }
+
+        private void PredictProbabilities(
+            SparseVector x,
+            double[] scores)
+        {
+            double max = double.NegativeInfinity;
 
             for (int c = 0; c < classCount; c++)
             {
@@ -169,26 +255,29 @@ namespace NaturalLanguageActionClassifier
                 {
                     int f = x.Indices[j];
 
-                    if (f < featureCount)
+                    if ((uint)f < (uint)featureCount)
                         score += weights[c, f] * x.Values[j];
                 }
 
                 scores[c] = score;
+
+                if (score > max)
+                    max = score;
             }
 
-            double max = scores.Max();
             double sum = 0;
 
-            for (int i = 0; i < scores.Length; i++)
+            for (int c = 0; c < classCount; c++)
             {
-                scores[i] = Math.Exp(scores[i] - max);
-                sum += scores[i];
+                double value = Math.Exp(scores[c] - max);
+                scores[c] = value;
+                sum += value;
             }
 
-            for (int i = 0; i < scores.Length; i++)
-                scores[i] /= sum;
+            double invSum = 1.0 / sum;
 
-            return scores;
+            for (int c = 0; c < classCount; c++)
+                scores[c] *= invSum;
         }
 
         private static int ArgMax(double[] values)

@@ -1,14 +1,14 @@
 public class MatchResult
 {
-    public EscapeAction ActionId;
+    public string ActionId;
 
-    public string Intend;
-    public string Target;
+    public StatisticalFeature Feature;
 
     public string DisplayText;
-
+    
     public float IntendScore;
     public float TargetScore;
+    public float ContextScore;
 
     public float CharacterScore;
     public float WordScore;
@@ -25,13 +25,12 @@ public class MatchResult
     //public bool FocusUsed;
 
     public MatchResult(
-        EscapeAction actionId,
-        string intend,
-        string target,
-        string displayText,
+        string actionId,
+        StatisticalFeature feature,
 
         float intendScore,
         float targetScore,
+        float contextScore,
 
         float characterScore,
         float wordScore,
@@ -50,16 +49,14 @@ public class MatchResult
     {
         ActionId = actionId;
 
-        Intend = intend;
-        Target = target;
-
-        DisplayText = displayText;
+        Feature = feature;
 
         IntendScore = intendScore;
         TargetScore = targetScore;
 
         CharacterScore = characterScore;
         WordScore = wordScore;
+        ContextScore = contextScore;
 
         //ContextScore = contextScore;
         //PersonalScore = personalScore;
@@ -77,8 +74,9 @@ public class MatchResult
     {
         return
             $"ACTION={ActionId} / " +
-            $"INTENT={Intend ?? "NULL"}({IntendScore:F3}) / " +
-            $"TARGET={Target ?? "NULL"}({TargetScore:F3}) / " +
+            $"INTENT={Feature.Intend ?? "NULL"}({IntendScore:F3}) / " +
+            $"TARGET={Feature.Target ?? "NULL"}({TargetScore:F3}) / " +
+            $"CONTEXT={Feature.Context ?? "NULL"}({ContextScore:F3}) / " +
             $"Character={CharacterScore:F3} / " +
             $"Word={WordScore:F3} / " +
             //$"Context={ContextScore:F3} / " +

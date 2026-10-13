@@ -20,8 +20,7 @@ public class FeatureScorer
     // Build
     // =========================================================
 
-    public void Build(
-        IList<ActionTrainingSample> samples)
+    public void Build(IList<ActionTrainingSample> samples)
     {
         characterDocumentFrequency.Clear();
         wordDocumentFrequency.Clear();
