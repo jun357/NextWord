@@ -69,25 +69,24 @@ namespace NaturalLanguageActionClassifier
                 throw new InvalidOperationException("학습 가능한 Action이 없습니다.");
 
             // Vocabulary는 Train 데이터만 사용해 학습
-            vectorizer.Fit(
-                trainSamples.Select(s => s.Text).ToList());
+            vectorizer.Fit(trainSamples.Select(s => s.Text).ToList());
 
             // Sparse TF-IDF 변환
             SparseVector[] trainX = trainSamples
-                .Select(s => vectorizer.TransformSparse(s.Text))
-                .ToArray();
+            .Select(s => vectorizer.TransformSparse(s.Text))
+            .ToArray();
 
             SparseVector[] validationX = validationSamples
-                .Select(s => vectorizer.TransformSparse(s.Text))
-                .ToArray();
+            .Select(s => vectorizer.TransformSparse(s.Text))
+            .ToArray();
 
             int[] trainY = trainSamples
-                .Select(s => labelToIndex[s.Action])
-                .ToArray();
+            .Select(s => labelToIndex[s.Action])
+            .ToArray();
 
             int[] validationY = validationSamples
-                .Select(s => labelToIndex[s.Action])
-                .ToArray();
+            .Select(s => labelToIndex[s.Action])
+            .ToArray();
 
             Debug.Log(
                 $"[Data] Train={trainX.Length}, " +

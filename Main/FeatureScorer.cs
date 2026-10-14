@@ -1,20 +1,16 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using UnityEngine;
 
 public class FeatureScorer
 {
-    public int CharacterNGram { get; set; } = 2;
+    public const int CharacterNGram = 2;
 
-    private readonly Dictionary<string, int>
-        characterDocumentFrequency =
-        new Dictionary<string, int>();
+    private readonly Dictionary<string, float> charDF = new();
 
-    private readonly Dictionary<string, int>
-        wordDocumentFrequency =
-        new Dictionary<string, int>();
+    private readonly Dictionary<string, float> wordDF = new();
 
-    private int documentCount;
+    //private int documentCount;
 
     // =========================================================
     // Build
@@ -22,37 +18,28 @@ public class FeatureScorer
 
     public void Build(IList<ActionTrainingSample> samples)
     {
-        characterDocumentFrequency.Clear();
-        wordDocumentFrequency.Clear();
-
-        documentCount = samples.Count;
+        //documentCount = 0;
+        charDF.Clear();
+        wordDF.Clear();
 
         foreach (ActionTrainingSample sample in samples)
         {
-            HashSet<string> characterUnique =
-                new HashSet<string>(
-                    sample.Positive.Keys
-                        .Where(x => x.Length == CharacterNGram));
+            //documentCount += sample.sampleCount;
 
-            foreach (string gram in characterUnique)
+            foreach ((string gram, float count) in sample.charFRQ)
             {
-                if (!characterDocumentFrequency.ContainsKey(gram))
-                    characterDocumentFrequency[gram] = 0;
+                if (!charDF.ContainsKey(gram))
+                    charDF[gram] = 0;
 
-                characterDocumentFrequency[gram]++;
+                charDF[gram] += count;
             }
 
-            HashSet<string> wordUnique =
-                new HashSet<string>(
-                    sample.Positive.Keys
-                        .Where(x => x.Length != CharacterNGram));
-
-            foreach (string word in wordUnique)
+            foreach ((string word, float count) in sample.wordFRQ)
             {
-                if (!wordDocumentFrequency.ContainsKey(word))
-                    wordDocumentFrequency[word] = 0;
+                if (!wordDF.ContainsKey(word))
+                    wordDF[word] = 0;
 
-                wordDocumentFrequency[word]++;
+                wordDF[word] += count;
             }
         }
     }
@@ -61,18 +48,14 @@ public class FeatureScorer
     // Character
     // =========================================================
 
-    public float ScoreCharacter(
-        ActionTrainingSample sample,
-        string input)
+    /*public float ScoreCharacter(ActionTrainingSample sample, string input)
     {
-        List<string> grams =
-            ExtractCharacterNGrams(input);
+        List<string> grams = ExtractCharacterNGrams(input);
 
         if (grams.Count == 0)
             return 0f;
 
-        Dictionary<string, int> tf =
-            BuildTermFrequency(grams);
+        Dictionary<string, int> tf = BuildTermFrequency(grams);
 
         float positive = 0f;
         float negative = 0f;
@@ -83,51 +66,46 @@ public class FeatureScorer
 
             float tfValue = pair.Value;
 
-            float idf =
-                CharacterIDF(gram);
+            float idf = CharacterIDF(gram);
 
-            if (sample.Positive.TryGetValue(
-                    gram,
-                    out float p))
+            if (sample.Positive.TryGetValue(gram, out float p))
             {
-                positive +=
-                    tfValue *
-                    p *
-                    idf;
+                positive += tfValue * p * idf;
             }
-
-            /*if (sample.Negative.TryGetValue(
-                    gram,
-                    out float n))
-            {
-                negative +=
-                    tfValue *
-                    n *
-                    idf;
-            }*/
         }
 
-        return Math.Max(
-            0f,
-            positive - negative);
+        return Math.Max(0f, positive - negative);
+    }*/
+
+    public float ScoreCharacter(IReadOnlyDictionary<string, int> tf, IReadOnlyDictionary<string, float> positive)
+    {
+        float score = 0f;
+
+        foreach ((string gram, int FRQ) in tf)
+        {
+            if (positive.TryGetValue(gram, out float p))
+            {
+                score += FRQ * p * CharacterIDF(gram);
+            }
+        }
+
+        return Math.Max(0f, score);
     }
 
     // =========================================================
     // Word
     // =========================================================
 
-    public float ScoreWord(
+    /*public float ScoreWord(
         ActionTrainingSample sample,
         string input)
     {
-        string[] words =
-            TokenizeWords(input);
+        string[] words = TokenizeWords(input);
 
         if (words.Length == 0)
             return 0f;
 
-        Dictionary<string, int> tf =
-            BuildTermFrequency(words);
+        Dictionary<string, int> tf = BuildTermFrequency(words);
 
         float positive = 0f;
         float negative = 0f;
@@ -138,8 +116,7 @@ public class FeatureScorer
 
             float tfValue = pair.Value;
 
-            float idf =
-                WordIDF(word);
+            float idf = WordIDF(word);
 
             if (sample.Positive.TryGetValue(
                     word,
@@ -151,7 +128,7 @@ public class FeatureScorer
                     idf;
             }
 
-            /*if (sample.Negative.TryGetValue(
+            if (sample.Negative.TryGetValue(
                     word,
                     out float n))
             {
@@ -159,41 +136,70 @@ public class FeatureScorer
                     tfValue *
                     n *
                     idf;
-            }*/
+            }
         }
 
         return Math.Max(
             0f,
             positive - negative);
+    }*/
+
+    public float ScoreWord(IReadOnlyDictionary<string, int> tf, IReadOnlyDictionary<string, float> positive)
+    {
+        float score = 0f;
+
+        foreach ((string word, float FRQ) in tf)
+        {
+            if (positive.TryGetValue(word, out float p))
+            {
+                score += FRQ * p * WordIDF(word);
+            }
+        }
+
+        return Math.Max(0f, score);
     }
 
     // =========================================================
     // Combined
     // =========================================================
 
-    public float Score(
+    /*public float Score(
         ActionTrainingSample sample,
         string input,
         float characterWeight,
         float wordWeight)
     {
-        return
-            ScoreCharacter(sample, input)
-                * characterWeight
-            +
-            ScoreWord(sample, input)
-                * wordWeight;
+        return ScoreCharacter(sample, input) * characterWeight
+             + ScoreWord(sample, input) * wordWeight;
+    }*/
+
+    /*public float Score(
+        IReadOnlyDictionary<string, int> charTf,
+        IReadOnlyDictionary<string, int> wordTf, 
+        IReadOnlyDictionary<string, float> positive,
+        float characterWeight,
+        float wordWeight)
+    {
+        return ScoreCharacter(charTf, positive) * characterWeight
+             + ScoreWord(wordTf, positive) * wordWeight;
+    }*/
+
+    public Vector2 ExtractScore(
+        IReadOnlyDictionary<string, int> charTf,
+        IReadOnlyDictionary<string, int> wordTf,
+        IReadOnlyDictionary<string, float> charFRQ,
+        IReadOnlyDictionary<string, float> wordFRQ)
+    {
+        return new Vector2(ScoreCharacter(charTf, charFRQ), ScoreWord(wordTf, wordFRQ));
     }
 
     // =========================================================
     // Feature extraction
     // =========================================================
 
-    public List<string> ExtractCharacterNGrams(
-        string text)
+    public static List<string> ExtractCharacterNGrams(string text)
     {
-        List<string> result =
-            new List<string>();
+        List<string> result = new();
 
         if (string.IsNullOrEmpty(text))
             return result;
@@ -215,7 +221,7 @@ public class FeatureScorer
         return result;
     }
 
-    public string[] TokenizeWords(
+    public static string[] TokenizeWords(
         string text)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -240,13 +246,8 @@ public class FeatureScorer
                 StringSplitOptions.RemoveEmptyEntries);
     }
 
-    private Dictionary<string, int>
-        BuildTermFrequency(
-            IEnumerable<string> terms)
+    public static void PopulateTF(Dictionary<string, int> tf, IEnumerable<string> terms)
     {
-        Dictionary<string, int> tf =
-            new Dictionary<string, int>();
-
         foreach (string term in terms)
         {
             if (!tf.ContainsKey(term))
@@ -254,45 +255,43 @@ public class FeatureScorer
 
             tf[term]++;
         }
+    }
 
-        return tf;
+    public static void PopulateTF(Dictionary<string, float> tf, IEnumerable<string> terms)
+    {
+        foreach (string term in terms)
+        {
+            if (!tf.ContainsKey(term))
+                tf[term] = 0;
+
+            tf[term]++;
+        }
     }
 
     // =========================================================
     // IDF
     // =========================================================
 
-    private float CharacterIDF(
-        string gram)
+    private float CharacterIDF(string gram)
     {
-        if (!characterDocumentFrequency.TryGetValue(
-                gram,
-                out int df))
+        if (!charDF.TryGetValue(gram, out float df))
         {
             return 1f;
         }
 
-        return
-            (float)Math.Log(
-                (documentCount + 1f) /
-                (df + 1f))
-            + 1f;
+        return 77 / df;
+        //return (float)Math.Log((documentCount + 1f) / (df + 1f)) + 1f;
     }
 
     private float WordIDF(
         string word)
     {
-        if (!wordDocumentFrequency.TryGetValue(
-                word,
-                out int df))
+        if (!wordDF.TryGetValue(word, out float df))
         {
             return 1f;
         }
 
-        return
-            (float)Math.Log(
-                (documentCount + 1f) /
-                (df + 1f))
-            + 1f;
+        return 77 / df;
+        //return (float)Math.Log((documentCount + 1f) / (df + 1f))+ 1f;
     }
 }

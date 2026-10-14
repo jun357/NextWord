@@ -53,19 +53,19 @@ namespace NaturalLanguageActionClassifier
         }
 
         public void Fit(
-    SparseVector[] trainX,
-    int[] trainY,
-    SparseVector[] valX,
-    int[] valY,
-    List<string> classLabels,
-    double learningRate,
-    int maxEpochs,
-    int seed,
-    Action<int, double, double> onEpoch = null,
-    int evalStep = 50,
-    int patience = 5,
-    double minDelta = 0.0001
-)
+            SparseVector[] trainX,
+            int[] trainY,
+            SparseVector[] valX,
+            int[] valY,
+            List<string> classLabels,
+            double learningRate,
+            int maxEpochs,
+            int seed,
+            Action<int, double, double> onEpoch = null,
+            int evalStep = 50,
+            int patience = 5,
+            double minDelta = 0.0001
+        )
         {
             if (trainX == null || trainX.Length == 0)
                 throw new ArgumentException("Train 데이터가 없습니다.");
@@ -159,9 +159,7 @@ namespace NaturalLanguageActionClassifier
                             if ((uint)f >= (uint)featureCount)
                                 continue;
 
-                            weights[c, f] -= learningRate *
-                                (error * vector.Values[j]
-                                 + l2 * weights[c, f]);
+                            weights[c, f] -= learningRate * (error * vector.Values[j] + l2 * weights[c, f]);
                         }
                     }
                 }

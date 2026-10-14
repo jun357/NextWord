@@ -48,7 +48,7 @@ public class MatchNormalizer
         // 슬롯 판정은 score보다 먼저
         // ------------------------------------------
 
-        if (!top.IntendExplicit)
+        /*if (!top.IntendExplicit)
         {
             if (top.TargetExplicit)
                 return MatchState.NeedIntend;
@@ -59,7 +59,7 @@ public class MatchNormalizer
         if (!top.TargetExplicit)
         {
             return MatchState.NeedTarget;
-        }
+        }*/
 
         // ------------------------------------------
         // 전체 confidence

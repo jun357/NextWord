@@ -22,7 +22,7 @@ public class MatchDecision
         // INTENT
         // -----------------------------------------
 
-        if (!top.IntendExplicit)
+        /*if (!top.IntendExplicit)
         {
             if (top.TargetExplicit)
                 return MatchState.NeedIntend;
@@ -37,7 +37,7 @@ public class MatchDecision
         if (!top.TargetExplicit)
         {
             return MatchState.NeedTarget;
-        }
+        }*/
 
         // -----------------------------------------
         // Action confidence

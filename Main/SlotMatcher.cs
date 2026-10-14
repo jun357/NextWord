@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
+using UnityEngine;
 
 public class SlotMatcher
 {
@@ -43,6 +43,7 @@ public class SlotMatcher
         this.scorer = scorer;
     }
 
+    /*
     // =========================================================
     // INTENT
     // =========================================================
@@ -74,13 +75,46 @@ public class SlotMatcher
         string input)
     {
         return Match(samples, input, x => x.Feature.Context);
-    }
+    }*/
 
     // =========================================================
     // Generic slot matching
     // =========================================================
 
-    private SlotResult Match(
+    public (Vector2[], Dictionary<(SlotFeature, string), Vector2>) Match(
+        IReadOnlyDictionary<string, int> charTf,
+        IReadOnlyDictionary<string, int> wordTf,
+        IList<ActionTrainingSample> samples
+    )
+    {
+        var Scores = new Vector2[samples.Count];
+        Dictionary<(SlotFeature, string), Vector2> featureScore = new();
+
+        int idx = 0;
+        foreach (ActionTrainingSample sample in samples)
+        {
+            string intend = sample.Feature.Intend;
+            //Index.AddIntoCollection((SlotFeature.Intend, intend), idx);
+
+            string target = sample.Feature.Target;
+            //Index.AddIntoCollection((SlotFeature.Target, target), idx);
+
+            string context = sample.Feature.Context;
+            //Index.AddIntoCollection((SlotFeature.Context, context), idx);
+
+            Vector2 rawScore = scorer.ExtractScore(charTf, wordTf, sample.charFRQ, sample.wordFRQ);
+            Scores[idx] = rawScore;
+            featureScore.AddInto((SlotFeature.Intend, intend), rawScore);
+            featureScore.AddInto((SlotFeature.Target, target), rawScore);
+            featureScore.AddInto((SlotFeature.Context, context), rawScore);
+
+            idx++;
+        }
+
+        return (Scores, featureScore);
+    }
+
+    /*private SlotResult Match(
         IList<ActionTrainingSample> samples,
         string input,
         Func<ActionTrainingSample, string> labelSelector)
@@ -91,7 +125,7 @@ public class SlotMatcher
 
         foreach (ActionTrainingSample sample in samples)
         {
-            string label = NormalizeLabel(labelSelector(sample));
+            string label = labelSelector(sample) ?? Normalizer.NULL_LABEL;
 
             float score =
                 scorer.Score(
@@ -111,7 +145,7 @@ public class SlotMatcher
         }
 
         return BuildResult(labelScores);
-    }
+    }*/
 
     // =========================================================
     // Result
@@ -170,13 +204,5 @@ public class SlotMatcher
             enoughSeparation;
 
         return result;
-    }
-
-    private string NormalizeLabel(
-        string label)
-    {
-        return string.IsNullOrWhiteSpace(label)
-            ? NULL_LABEL
-            : label;
     }
 }
