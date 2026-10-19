@@ -146,9 +146,7 @@ namespace NaturalLanguageActionClassifier
 
                     for (int c = 0; c < classCount; c++)
                     {
-                        double error =
-                            probabilityBuffer[c] -
-                            (c == target ? 1.0 : 0.0);
+                        double error = probabilityBuffer[c] - (c == target ? 1.0 : 0.0);
 
                         bias[c] -= learningRate * error;
 

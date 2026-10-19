@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Threading.Tasks;
+using System.Linq;
 
 public class WeightOptimizer : MonoBehaviour
 {
@@ -15,6 +16,144 @@ public class WeightOptimizer : MonoBehaviour
     {
         return new Vector2(UnityEngine.Random.Range(1f, 3.0f), UnityEngine.Random.Range(1f, 3.0f));
     }
+
+    public Dictionary<string, float[]> InitialModel(IEnumerable<string> actions)
+    {
+        var model = new Dictionary<string, float[]>();
+        foreach (string action in actions)
+        {
+            model[action] = new float[8] { 1, 1, 1, 1, 1, 1, 1, 1 };
+        }
+        return model;
+    }
+
+    public void OptimizeWeightsHacker(List<TrainingSample> trainingSet, List<TrainingSample> validationSet)
+    {
+        Debug.Log(trainingSet.Count);
+        Debug.Log(validationSet.Count);
+
+        var model = InitialModel(matcher.Actions);
+
+        var trainCache = new List<(
+            Vector2[],
+            Dictionary<(SlotFeature, string), Vector2>,
+            string)>();
+
+        var validationCache = new List<(
+            Vector2[],
+            Dictionary<(SlotFeature, string), Vector2>,
+            string)>();
+
+        foreach (var entry in trainingSet)
+        {
+            var (scores, featureScore) = matcher.TextToScoreMap(entry.Text);
+
+            trainCache.Add((scores, featureScore, entry.Action));
+        }
+
+        foreach (var entry in validationSet)
+        {
+            var (scores, featureScore) = matcher.TextToScoreMap(entry.Text);
+
+            validationCache.Add((scores, featureScore, entry.Action));
+        }
+
+        const int epochs = 150;
+        const int evalInterval = 30;
+        const float learningRate = 0.15f;
+
+        float bestValidationLoss = float.PositiveInfinity;
+        Dictionary<string, float[]> bestModel = null;
+
+        for (int epoch = 1; epoch <= epochs; epoch++)
+        {
+            // Training
+            float trainLoss = 0f;
+
+            foreach (var (scores, featureScore, id) in trainCache)
+            {
+                trainLoss += matcher.TrainOne(scores, featureScore, model, id, learningRate);
+            }
+
+            // Validation: 지정된 간격으로만 실행
+            if (epoch % evalInterval != 0 && epoch != epochs)
+                continue;
+
+            float validationLoss = 0f;
+            int correctCount = 0;
+
+            foreach (var (scores, featureScore, id) in validationCache)
+            {
+                (float loss, bool correct) = matcher.EvaluateOne(scores, featureScore, model, id);
+                validationLoss += loss;
+
+                if (correct)
+                    correctCount++;
+            }
+
+            float avgTrainLoss = trainCache.Count > 0
+                ? trainLoss / trainCache.Count
+                : 0f;
+
+            float avgValidationLoss = validationCache.Count > 0
+                ? validationLoss / validationCache.Count
+                : 0f;
+
+            float accuracy = validationCache.Count > 0 ? (float)correctCount / validationCache.Count : 0f;
+
+            Debug.Log(
+                $"Epoch {epoch} | " +
+                $"Train Loss: {avgTrainLoss:F4} | " +
+                $"Validation Loss: {avgValidationLoss:F4} | "
+                + $"Validation Accuracy: {accuracy:P2}"
+                );
+
+            if (avgValidationLoss < bestValidationLoss)
+            {
+                bestValidationLoss = avgValidationLoss;
+
+                bestModel = model.ToDictionary(
+                    pair => pair.Key,
+                    pair => (float[])pair.Value.Clone());
+            }
+        }
+
+        if (bestModel != null)
+        {
+            // 실제 모델 저장소에도 반영해야 함
+            model = bestModel;
+        }
+    }
+
+    /*public void OptimizeWeightsHacker(List<TrainingSample> trainingSet, List<TrainingSample> validationSet)
+    {
+        var model = new Dictionary<string, float[]>();
+
+        var cache = new List<(Vector2[], Dictionary<(SlotFeature, string), Vector2>, string)>();
+        foreach (var entry in trainingSet)
+        {
+            (var scores, var featureScore) = matcher.TextToScoreMap(entry.Text);
+            cache.Add((scores, featureScore, entry.Action));
+        }
+
+        for (int epoch = 0; epoch < 500; epoch++)
+        {
+            float totalLoss = 0f;
+
+            foreach ((var scores, var featureScore, string id) in cache)
+            {
+                totalLoss += matcher.TrainOne(
+                    scores,
+                    featureScore,
+                    model,
+                    id,
+                    learningRate: 0.01f);
+            }
+
+            if (epoch % 100 == 0)
+                Debug.Log($"Epoch {epoch}, Loss: {totalLoss}");
+        }
+    }*/
 
     public void OptimizeWeightsPro(List<TrainingSample> validationDataset, List<(Vector2, Vector2, Vector2, Vector2)> weights = null)
     {

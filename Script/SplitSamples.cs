@@ -5,7 +5,6 @@ using System.Linq;
 
 public static class SplitSamples
 {
-    private const float validationRatio = 0.2f;
     public static List<string> FillActions(this List<TrainingSample> samples)
     {
         List<string> result = samples
@@ -47,7 +46,7 @@ public static class SplitSamples
         return samples;
     }
 
-    public static (List<TrainingSample>, List<TrainingSample>) Split(this List<TrainingSample> samples, int seed)
+    public static (List<TrainingSample>, List<TrainingSample>) Split(this List<TrainingSample> samples, int seed, float validationRatio)
     {
         // Action별로 Train / Validation 분리
         var random = new Random(seed);

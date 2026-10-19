@@ -43,7 +43,7 @@ public class InputConsumer : MonoBehaviour
         {
             //auto-fit mod
             List<TrainingSample> samples = CSVReader.ReadCSV(actionCsv_Train);
-            (List<TrainingSample> trainSamples, List<TrainingSample> validationSamples) = samples.Split(seed);
+            (List<TrainingSample> trainSamples, List<TrainingSample> validationSamples) = samples.Split(seed, 0.15f);
             List<string> ids = samples.FillActions();
             Dictionary<string, int> dict = ids.ToDictionary();
             usedModel.Model.AutoFit(trainSamples, validationSamples, ids, dict);

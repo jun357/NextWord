@@ -106,10 +106,7 @@ namespace NaturalLanguageActionClassifier
 
             var options = new ParallelOptions
             {
-                MaxDegreeOfParallelism = Math.Max(
-                    1,
-                    Math.Min(maxParallelism,
-                        Environment.ProcessorCount))
+                MaxDegreeOfParallelism = Math.Max(1, Math.Min(maxParallelism, Environment.ProcessorCount))
             };
 
             Parallel.ForEach(
