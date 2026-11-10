@@ -114,6 +114,59 @@ public class SlotMatcher
         return (Scores, featureScore);
     }
 
+    public Dictionary<(SlotFeature, string), Vector2> Match2(
+        IReadOnlyDictionary<string, int> charTf,
+        IReadOnlyDictionary<string, int> wordTf,
+        IList<ActionTrainingSample> samples
+    )
+    {
+        //var Scores = new Vector2[samples.Count];
+        Dictionary<(SlotFeature, string), Vector2> featureScore = new();
+
+        //int idx = 0;
+        foreach (ActionTrainingSample sample in samples)
+        {
+            string intend = sample.Feature.Intend;
+            //Index.AddIntoCollection((SlotFeature.Intend, intend), idx);
+
+            string target = sample.Feature.Target;
+            //Index.AddIntoCollection((SlotFeature.Target, target), idx);
+
+            string context = sample.Feature.Context;
+            //Index.AddIntoCollection((SlotFeature.Context, context), idx);
+
+            Vector2 rawScore = scorer.ExtractScore(charTf, wordTf, sample.charFRQ, sample.wordFRQ);
+            //Scores[idx] = rawScore;
+            featureScore.AddInto((SlotFeature.Intend, intend), rawScore);
+            featureScore.AddInto((SlotFeature.Target, target), rawScore);
+            featureScore.AddInto((SlotFeature.Context, context), rawScore);
+            featureScore.AddInto((SlotFeature.Action, sample.ActionId), rawScore);
+
+            //idx++;
+        }
+
+        return featureScore;
+    }
+
+    public Dictionary<SlotFeature, (string, Vector2)> GetBestMatch(Dictionary<(SlotFeature, string), Vector2> featureScore)
+    {
+        // SlotFeature별 최고점 라벨
+        Dictionary<SlotFeature, (string, Vector2)> bestFeatures = new();
+        foreach (KeyValuePair<(SlotFeature, string), Vector2> pair in featureScore)
+        {
+            var (feature, label) = pair.Key;
+            Vector2 score = pair.Value;
+
+            if (!bestFeatures.TryGetValue(feature, out var current) ||
+                score.x + score.y > current.Item2.x + current.Item2.y)
+            {
+                bestFeatures[feature] = (label, score);
+            }
+        }
+
+        return bestFeatures;
+    }
+
     /*private SlotResult Match(
         IList<ActionTrainingSample> samples,
         string input,
