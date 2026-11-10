@@ -17,12 +17,28 @@ public class WeightOptimizer : MonoBehaviour
         return new Vector2(UnityEngine.Random.Range(1f, 3.0f), UnityEngine.Random.Range(1f, 3.0f));
     }
 
-    public Dictionary<string, float[]> InitialModel(IEnumerable<string> actions)
+    public static Dictionary<string, float[]> InitialModel(IEnumerable<string> actions, bool mask_intend = false, bool mask_target = false, bool mask_context = false, bool mask_action = false)
     {
         var model = new Dictionary<string, float[]>();
         foreach (string action in actions)
         {
-            model[action] = new float[8] { 1, 1, 1, 1, 1, 1, 1, 1 };
+            model[action] = new float[8];
+            if (!mask_intend)
+                (model[action][0], model[action][1]) = (1,1);
+            if (!mask_target)
+                (model[action][2], model[action][3]) = (1, 1);
+            if (!mask_context)
+                (model[action][4], model[action][5]) = (1, 1);
+            if (!mask_action)
+                (model[action][6], model[action][7]) = (1, 1);
+            /*if (!mask_intend)
+                (model[action][0], model[action][1]) = (0.68f * 0.68f, 0.68f * 0.68f);
+            if (!mask_target)
+                (model[action][2], model[action][3]) = (1.055f * 1.055f, 1.055f * 1.055f);
+            if (!mask_context)
+                (model[action][4], model[action][5]) = (0.662f * 0.662f, 0.662f * 0.662f);
+            if (!mask_action)
+                (model[action][6], model[action][7]) = (1.629f * 1.629f, 1.629f * 1.629f);*/
         }
         return model;
     }
@@ -122,6 +138,7 @@ public class WeightOptimizer : MonoBehaviour
         {
             // 실제 모델 저장소에도 반영해야 함
             model = bestModel;
+            matcher.weights = bestModel;
         }
     }
 
@@ -155,7 +172,7 @@ public class WeightOptimizer : MonoBehaviour
         }
     }*/
 
-    public void OptimizeWeightsPro(List<TrainingSample> validationDataset, List<(Vector2, Vector2, Vector2, Vector2)> weights = null)
+    /*public void OptimizeWeightsPro(List<TrainingSample> validationDataset, List<(Vector2, Vector2, Vector2, Vector2)> weights = null)
     {
         if (weights == null)
         {
@@ -204,7 +221,7 @@ public class WeightOptimizer : MonoBehaviour
         );
 
         matcher.weights = best_weight.Flatten();
-    }
+    }*/
 
     public void OptimizeWeights(List<TrainingSample> validationDataset)
     {

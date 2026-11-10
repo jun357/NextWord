@@ -23,7 +23,8 @@ public enum SlotFeature
 {
     Intend = 0,
     Target = 1,
-    Context = 2
+    Context = 2,
+    Action = int.MaxValue,
 }
 
 [Serializable]
@@ -32,12 +33,9 @@ public readonly struct StatisticalFeature
     private readonly Dictionary<SlotFeature, string> _slotFeature;
     public string SlotFeatures(SlotFeature feature) => _slotFeature.GetValueOrDefault(feature);
 
-    //private readonly string intend;
-    public string Intend => _slotFeature.GetValueOrDefault(SlotFeature.Intend) ?? Normalizer.NULL_LABEL;
-    //private readonly string target;
-    public string Target => _slotFeature.GetValueOrDefault(SlotFeature.Target) ?? Normalizer.NULL_LABEL;
-    //private readonly string context;
-    public string Context => _slotFeature.GetValueOrDefault(SlotFeature.Context) ?? Normalizer.NULL_LABEL;
+    public string Intend => _slotFeature?.GetValueOrDefault(SlotFeature.Intend) ?? Normalizer.NULL_LABEL;
+    public string Target => _slotFeature?.GetValueOrDefault(SlotFeature.Target) ?? Normalizer.NULL_LABEL;
+    public string Context => _slotFeature?.GetValueOrDefault(SlotFeature.Context) ?? Normalizer.NULL_LABEL;
 
     [JsonConstructor]
     public StatisticalFeature(string Intend, string Target, string Context)
@@ -97,7 +95,8 @@ public class StatisticalMatcher : MonoBehaviour, ITrain
     // Weights
     // =========================================================
 
-    public float[] weights = { 1f,1f, 1f,1f, 1f,1f, 1f,1f };
+    //public float[] weights = { 1f,1f, 1f,1f, 1f,1f, 1f,1f };
+    public Dictionary<string, float[]> weights;
 
     public bool WasPreTrained => pre_trained != null;
 
@@ -120,17 +119,6 @@ public class StatisticalMatcher : MonoBehaviour, ITrain
     // =========================================================
 
     void ITrain.Train(ActionDatabase database) => Build(database);
-
-    private void BuildSlotFeature(Dictionary<(SlotFeature, string), SlotFeatureSample> slotfeatureCache, (SlotFeature, string) key, IReadOnlyList<string> ngram, IReadOnlyList<string> words)
-    {
-        if (!slotfeatureCache.TryGetValue(key, out SlotFeatureSample sample_i))
-        {
-            sample_i = new(key.Item2);
-            slotfeatureCache[key] = sample_i;
-        }
-
-        sample_i.Populate(ngram, words);
-    }
 
     private void Build(List<TrainingSample> trainSamples, Dictionary<string, StatisticalFeature> feature_table)
     {
@@ -198,7 +186,7 @@ public class StatisticalMatcher : MonoBehaviour, ITrain
         UnityEngine.Debug.Log(samples.Count);
     }
 
-    public (string, string[], double) Predict(string input, int top = 5)
+    /*public (string, string[], double) Predict(string input, int top = 5)
     {
         var stopwatch = Stopwatch.StartNew();
         Vector2[] ws = weights.ToVector2Array();
@@ -207,7 +195,7 @@ public class StatisticalMatcher : MonoBehaviour, ITrain
         if (result == null || result.Count == 0)
             return (Normalizer.NULL_ID, System.Array.Empty<string>(), stopwatch.Elapsed.TotalMilliseconds);
         return (result[0].ActionId, result.Select(x => x.ToString()).ToArray(), stopwatch.Elapsed.TotalMilliseconds);
-    }
+    }*/
 
     // =========================================================
     // Match
@@ -368,6 +356,8 @@ public class StatisticalMatcher : MonoBehaviour, ITrain
     // Classify
     // =========================================================
 
+    const float rate = 1 - 0.8235294117647059f;
+
     public MatchState Classify(
         IReadOnlyList<MatchResult> results)
     {
@@ -376,10 +366,17 @@ public class StatisticalMatcher : MonoBehaviour, ITrain
 
     public void AutoFit(List<TrainingSample> trainSamples, List<TrainingSample> validationSamples, List<string> ids, Dictionary<string, int> dict)
     {
-        (List<TrainingSample> dataSet, List<TrainingSample> trainSet) = trainSamples.Split(42, 1 - 0.8235294117647059f);
+        Build(trainSamples, feature_table);
+        weights = WeightOptimizer.InitialModel(Actions, mask_intend:false, mask_target:false, mask_context: false, mask_action: false);
+    }
+
+    /*public void AutoFit(List<TrainingSample> trainSamples, List<TrainingSample> validationSamples, List<string> ids, Dictionary<string, int> dict)
+    {
+        (List<TrainingSample> dataSet, List<TrainingSample> trainSet) = trainSamples.Split(42, rate);
         Build(dataSet, feature_table);
         optimizer.OptimizeWeightsHacker(trainSet, validationSamples);
-    }
+        Build(trainSamples, feature_table);
+    }*/
 
     public void LoadModel(ActionDatabase database)
     {
@@ -448,24 +445,6 @@ public class StatisticalMatcher : MonoBehaviour, ITrain
         return loss;
     }
 
-    private float[] Softmax(float[] logits)
-    {
-        float maxLogit = logits.Max();
-        float[] probabilities = new float[logits.Length];
-        float sumExp = 0f;
-
-        for (int i = 0; i < logits.Length; i++)
-        {
-            probabilities[i] = MathF.Exp(logits[i] - maxLogit);
-            sumExp += probabilities[i];
-        }
-
-        for (int i = 0; i < probabilities.Length; i++)
-            probabilities[i] /= sumExp;
-
-        return probabilities;
-    }
-
     private Dictionary<string, float> Softmax(
     Dictionary<string, float> logits)
     {
@@ -488,22 +467,6 @@ public class StatisticalMatcher : MonoBehaviour, ITrain
             probabilities[actionId] /= sumExp;
 
         return probabilities;
-    }
-
-    private float CalculateCrossEntropy(
-    float[] probabilities,
-    string[] actionIds,
-    string targetActionId)
-    {
-        int targetIndex = Array.IndexOf(actionIds, targetActionId);
-
-        if (targetIndex < 0)
-            throw new ArgumentException(
-                "Target action is not present in candidates.",
-                nameof(targetActionId));
-
-        return -MathF.Log(
-            MathF.Max(probabilities[targetIndex], 1e-7f));
     }
 
     private float CalculateLoss(
@@ -542,5 +505,350 @@ public class StatisticalMatcher : MonoBehaviour, ITrain
         }
 
         return (loss, maxKey == targetActionId);
+    }
+
+    /*public TestResult Test(List<TrainingSample> testSamples)
+    {
+        TestResult result = new();
+
+        if (testSamples == null || testSamples.Count == 0)
+            return result;
+
+        double totalLoss = 0;
+
+        foreach (TrainingSample sample in testSamples)
+        {
+            // 실제 정답
+            string targetActionId = sample.Action;
+
+            // 예측
+            var (predictedId, _, _) = Predict(sample.Text);
+
+            result.TotalSamples++;
+
+            if (predictedId == targetActionId)
+            {
+                result.CorrectPredictions++;
+            }
+            else
+            {
+                result.IncorrectPredictions++;
+            }
+
+            // 정답 액션의 점수로 Cross Entropy를 계산할 수 있도록
+            // 전체 액션의 점수를 가져온다.
+            var matches = Match(
+                sample.Text,
+                weights.ToVector2Array()[0],
+                weights.ToVector2Array()[1],
+                weights.ToVector2Array()[2],
+                weights.ToVector2Array()[3],
+                samples.Count);
+
+            if (matches.Count > 0)
+            {
+                float maxScore = matches.Max(x => x.FinalScore);
+
+                float sumExp = 0;
+                foreach (var match in matches)
+                    sumExp += MathF.Exp(match.FinalScore - maxScore);
+
+                var targetMatch = matches.FirstOrDefault(
+                    x => x.ActionId == targetActionId);
+
+                if (targetMatch != null)
+                {
+                    double logSumExp =
+                        maxScore + Math.Log(sumExp);
+
+                    totalLoss += logSumExp - targetMatch.FinalScore;
+                }
+                else
+                {
+                    // 정답 액션이 모델 후보에 없는 경우
+                    totalLoss += -Math.Log(1e-7);
+                }
+            }
+        }
+
+        result.Accuracy =
+            result.TotalSamples > 0
+                ? (double)result.CorrectPredictions / result.TotalSamples
+                : 0;
+
+        result.AverageLoss =
+            result.TotalSamples > 0
+                ? totalLoss / result.TotalSamples
+                : 0;
+
+        return result;
+    }*/
+
+    private Dictionary<string, float> CalculateScores(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return new Dictionary<string, float>();
+
+        if (weights == null || weights.Count == 0)
+            throw new InvalidOperationException(
+                "Model weights have not been initialized.");
+
+        string normalized = input.Normalize();
+
+        var grams = FeatureScorer.ExtractCharacterNGrams(normalized);
+        Dictionary<string, int> charTf = new();
+        FeatureScorer.PopulateTF(charTf, grams);
+
+        var words = FeatureScorer.TokenizeWords(normalized);
+        Dictionary<string, int> wordTf = new();
+        FeatureScorer.PopulateTF(wordTf, words);
+
+        var (scores, featureScore) = slotMatcher.Match(charTf, wordTf, samples);
+
+        return ScoreMapToScore(scores, featureScore, weights);
+    }
+
+    public (string, string[], double) Predict(
+    string input,
+    int top = 5)
+    {
+        var stopwatch = Stopwatch.StartNew();
+
+        var scores = CalculateScores(input);
+
+        stopwatch.Stop();
+
+        if (scores.Count == 0)
+        {
+            return (
+                Normalizer.NULL_ID,
+                Array.Empty<string>(),
+                stopwatch.Elapsed.TotalMilliseconds);
+        }
+
+        var ranked = scores
+            .OrderByDescending(x => x.Value)
+            .Take(Math.Max(1, top))
+            .Select(x => new MatchResult(
+                x.Key,
+                samples.First(s => s.ActionId == x.Key).Feature,
+                0f, 0f, 0f, 0f,
+                x.Value))
+            .ToList();
+
+        return (
+            ranked[0].ActionId,
+            ranked.Select(x => x.ToString()).ToArray(),
+            stopwatch.Elapsed.TotalMilliseconds);
+    }
+
+    public TestResult Test(List<TrainingSample> testSamples)
+    {
+        TestResult result = new();
+
+        if (testSamples == null || testSamples.Count == 0)
+            return result;
+
+        double totalLoss = 0;
+
+        foreach (TrainingSample sample in testSamples)
+        {
+            Dictionary<string, float> logits = CalculateScores(sample.Text);
+
+            if (logits.Count == 0)
+                continue;
+
+            result.TotalSamples++;
+
+            string predictedId = logits.OrderByDescending(x => x.Value).First().Key;
+
+            if (predictedId == sample.Action)
+                result.CorrectPredictions++;
+            else
+                result.IncorrectPredictions++;
+
+            // 전체 액션 점수로 안정적인 Cross Entropy 계산
+            float maxLogit = logits.Values.Max();
+            double sumExp = 0;
+
+            foreach (float logit in logits.Values)
+                sumExp += Math.Exp(logit - maxLogit);
+
+            if (logits.TryGetValue(sample.Action, out float targetLogit))
+            {
+                totalLoss +=
+                    Math.Log(sumExp) + maxLogit - targetLogit;
+            }
+            else
+            {
+                totalLoss += -Math.Log(1e-7);
+            }
+        }
+
+        if (result.TotalSamples > 0)
+        {
+            result.Accuracy = (double)result.CorrectPredictions / result.TotalSamples;
+
+            result.AverageLoss = totalLoss / result.TotalSamples;
+        }
+
+        return result;
+    }
+
+    /*public void Test2(string currentInput, string trueLabel)
+    {
+        string current = currentInput.Normalize();
+
+        List<string> grams = FeatureScorer.ExtractCharacterNGrams(current);
+        Dictionary<string, int> charTf = new();
+        FeatureScorer.PopulateTF(charTf, grams);
+
+        string[] words = FeatureScorer.TokenizeWords(current);
+        Dictionary<string, int> wordTf = new();
+        FeatureScorer.PopulateTF(wordTf, words);
+
+        var featureScore = slotMatcher.Match2(charTf, wordTf, samples);
+
+        var result = slotMatcher.GetBestMatch(featureScore);
+
+        string bestIntend = result[SlotFeature.Intend].Item1;
+        string bestTarget = result[SlotFeature.Target].Item1;
+        string bestContext = result[SlotFeature.Context].Item1;
+        string bestAction = result[SlotFeature.Action].Item1;
+
+        string trueIntend = feature_table.GetValueOrDefault(trueLabel).Intend;
+        string trueTarget = feature_table.GetValueOrDefault(trueLabel).Target;
+        string trueContext = feature_table.GetValueOrDefault(trueLabel).Context;
+        string trueAction = trueLabel;
+
+        bool intendCorrect = bestIntend == trueIntend;
+        bool targetCorrect = bestTarget == trueTarget;
+        bool contextCorrect = bestContext == trueContext;
+        bool actionCorrect = bestAction == trueAction;
+    }*/
+
+    public EvaluationResult Test2(List<TrainingSample> testSamples)
+    {
+        EvaluationResult eval = new();
+
+        foreach (var sample in testSamples)
+        {
+            string current = sample.Text.Normalize();
+
+            List<string> grams = FeatureScorer.ExtractCharacterNGrams(current);
+
+            Dictionary<string, int> charTf = new();
+            FeatureScorer.PopulateTF(charTf, grams);
+
+            string[] words = FeatureScorer.TokenizeWords(current);
+
+            Dictionary<string, int> wordTf = new();
+            FeatureScorer.PopulateTF(wordTf, words);
+
+            var featureScore = slotMatcher.Match2(charTf, wordTf, samples);
+
+            var result = slotMatcher.GetBestMatch(featureScore);
+
+            if (!feature_table.TryGetValue(sample.Action, out var truth))
+                continue;
+
+            // 실제 정답
+            string trueIntend = truth.Intend;
+            string trueTarget = truth.Target;
+            string trueContext = truth.Context;
+            string trueAction = sample.Action;
+
+            // 예측 결과
+            string bestIntend = result[SlotFeature.Intend].Item1;
+            string bestTarget = result[SlotFeature.Target].Item1;
+            string bestContext = result[SlotFeature.Context].Item1;
+            string bestAction = result[SlotFeature.Action].Item1;
+
+            // 평가
+            eval.Add(SlotFeature.Intend, trueIntend, bestIntend);
+            eval.Add(SlotFeature.Target, trueTarget, bestTarget);
+            eval.Add(SlotFeature.Context, trueContext, bestContext);
+            eval.Add(SlotFeature.Action, trueAction, bestAction);
+        }
+
+        return eval;
+    }
+
+    public void PrintTopConfusions(
+        EvaluationResult eval,
+        SlotFeature feature)
+    {
+        var matrix = eval.ConfusionMatrices[feature];
+
+        var confusions = matrix
+            .SelectMany(actual => actual.Value
+                .Where(predicted => actual.Key != predicted.Key)
+                .Select(predicted => new
+                {
+                    Actual = actual.Key,
+                    Predicted = predicted.Key,
+                    Count = predicted.Value
+                }))
+            .OrderByDescending(x => x.Count)
+            .ThenBy(x => x.Actual)
+            .Take(10)
+            .ToList();
+
+        UnityEngine.Debug.Log($"\n===== {feature} Top Confusions =====");
+
+        if (confusions.Count == 0)
+        {
+            UnityEngine.Debug.Log("No Confusions!");
+            return;
+        }
+
+        foreach (var item in confusions)
+        {
+            UnityEngine.Debug.Log(
+                $"{item.Actual} -> {item.Predicted} : {item.Count}");
+        }
+
+        UnityEngine.Debug.Log($"Accuracy: {eval.GetAccuracy(feature):P2}");
+    }
+}
+
+public class EvaluationResult
+{
+    public int Total { get; set; }
+
+    public Dictionary<SlotFeature, int> Correct { get; } = new();
+
+    // [실제 정답][예측 결과] = 횟수
+    public Dictionary<SlotFeature, Dictionary<string, Dictionary<string, int>>>
+        ConfusionMatrices
+    { get; } = new();
+
+    public void Add(
+        SlotFeature feature,
+        string actual,
+        string predicted)
+    {
+        Total++;
+
+        if (actual == predicted)
+        {
+            Correct[feature] = Correct.GetValueOrDefault(feature) + 1;
+        }
+
+        if (!ConfusionMatrices.ContainsKey(feature))
+            ConfusionMatrices[feature] = new();
+
+        var matrix = ConfusionMatrices[feature];
+
+        if (!matrix.ContainsKey(actual))
+            matrix[actual] = new();
+
+        matrix[actual][predicted] =
+            matrix[actual].GetValueOrDefault(predicted) + 1;
+    }
+
+    public double GetAccuracy(SlotFeature feature)
+    {
+        return Total == 0 ? 0 : (double)Correct.GetValueOrDefault(feature) / Total;
     }
 }

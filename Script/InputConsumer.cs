@@ -5,6 +5,15 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
+public class TestResult
+{
+    public int TotalSamples { get; set; }
+    public int CorrectPredictions { get; set; }
+    public int IncorrectPredictions { get; set; }
+    public double Accuracy { get; set; }
+    public double AverageLoss { get; set; }
+}
+
 public interface ITrain
 {
     public bool WasPreTrained { get; }
@@ -12,6 +21,7 @@ public interface ITrain
     public void AutoFit(List<TrainingSample> trainSamples, List<TrainingSample> validationSamples, List<string> ids, Dictionary<string, int> dict);
     public (string, string[], double) Predict(string input, int top = 5);
     public void LoadModel(ActionDatabase database);
+    public TestResult Test(List<TrainingSample> testSamples);
 }
 
 public class InputConsumer : MonoBehaviour
@@ -19,7 +29,7 @@ public class InputConsumer : MonoBehaviour
     [SerializeField] private TMP_InputField input;
     [Header("JSON")] public TextAsset actionJson;
     [Header("CSV")] public TextAsset actionCsv_Train;
-    public TextAsset actionCsv_Test;
+    [Header("CSV")] public TextAsset actionCsv_Test;
     [SerializeField] private UsedModel usedModel;
     public event Action<string> OnPredict;
     private const int seed = 42;
@@ -28,7 +38,51 @@ public class InputConsumer : MonoBehaviour
 
     private void Awake()
     {
-        usedModel.OnModelLoad += InputData;
+        usedModel.OnModelLoad += AutoFitAndTest;
+    }
+
+    private void AutoFitAndTest()
+    {
+        if (actionCsv_Train != null)
+        {
+            List<TrainingSample> samples =
+                CSVReader.ReadCSV(actionCsv_Train);
+
+            //var (trainSamples, validationSamples) = samples.Split(seed, 0.15f);
+
+            var (trainSamples, validationSamples) = (samples, new List<TrainingSample>());
+
+            List<string> ids = samples.FillActions();
+            Dictionary<string, int> dict = ids.ToDictionary();
+
+            usedModel.Model.AutoFit(
+                trainSamples,
+                validationSamples,
+                ids,
+                dict);
+        }
+
+        if (actionCsv_Test != null)
+        {
+            List<TrainingSample> testSamples = CSVReader.ReadCSV(actionCsv_Test);
+
+            /*if (usedModel.Model is StatisticalMatcher statisticalMatcher)
+            {
+                var eval = statisticalMatcher.Test2(testSamples);
+                statisticalMatcher.PrintTopConfusions(eval, SlotFeature.Intend);
+                statisticalMatcher.PrintTopConfusions(eval, SlotFeature.Target);
+                statisticalMatcher.PrintTopConfusions(eval, SlotFeature.Context);
+                statisticalMatcher.PrintTopConfusions(eval, SlotFeature.Action);
+                return;
+            }*/
+
+            TestResult result = usedModel.Model.Test(testSamples);
+            Debug.Log($"Total: {result.TotalSamples}\n" +
+                      $"Correct: {result.CorrectPredictions}\n" +
+                      $"Incorrect: {result.IncorrectPredictions}\n" +
+                      $"Accuracy: {result.Accuracy:P2}\n" +
+                      $"Average Loss: {result.AverageLoss:F4}");
+        }
     }
 
     private void InputData()
